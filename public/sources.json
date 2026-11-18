@@ -1,5 +1,5 @@
 [
-  {"id": "spa", "name": "واس", "full": "وكالة الأنباء السعودية", "color": "#0a7a45", "lang": "ar", "domain": "spa.gov.sa", "feeds": ["https://www.spa.gov.sa/rss.xml"]},
+  {"id": "spa", "name": "واس", "full": "وكالة الأنباء السعودية", "color": "#0a7a45", "lang": "ar", "domain": "spa.gov.sa", "feeds": ["https://www.spa.gov.sa/rss.xml"], "query": "واس OR المملكة OR السعودية OR الرياض"},
   {"id": "sabq", "name": "سبق", "full": "صحيفة سبق الإلكترونية", "color": "#c62828", "lang": "ar", "domain": "sabq.org", "feeds": ["https://sabq.org/rss.xml", "https://sabq.org/stories.rss"]},
   {"id": "okaz", "name": "عكاظ", "full": "صحيفة عكاظ", "color": "#1565c0", "lang": "ar", "domain": "okaz.com.sa", "feeds": ["https://www.okaz.com.sa/rssFeed/0", "https://www.okaz.com.sa/rssFeed/190"]},
   {"id": "alriyadh", "name": "الرياض", "full": "جريدة الرياض", "color": "#00695c", "lang": "ar", "domain": "alriyadh.com", "feeds": ["https://www.alriyadh.com/section.main.xml"]},

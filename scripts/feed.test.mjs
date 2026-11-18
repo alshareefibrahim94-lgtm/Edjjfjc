@@ -64,3 +64,12 @@ test('parses YouTube channel feeds and channel ids', () => {
   assert.equal(findChannelId('<link href="https://www.youtube.com/channel/UC0123456789_-ABCDEFGHIJ">'), 'UC0123456789_-ABCDEFGHIJ');
   assert.equal(findChannelId('nothing'), '');
 });
+
+test('Arabic sources drop non-Arabic (translated) headlines', () => {
+  const raw = [
+    { title: 'Crown Prince receives minister', link: 'https://e.sa/en/1', date: now, summary: '', image: '' },
+    { title: 'ولي العهد يستقبل الوزير', link: 'https://e.sa/2', date: now, summary: '', image: '' },
+  ];
+  assert.deepEqual(normalizeItems(raw, { id: 'spa', lang: 'ar' }, { now }).map((i) => i.u), ['https://e.sa/2']);
+  assert.equal(normalizeItems(raw, { id: 'x', lang: 'en' }, { now }).length, 2);
+});

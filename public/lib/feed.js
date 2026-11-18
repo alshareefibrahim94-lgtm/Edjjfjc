@@ -140,6 +140,8 @@ export function normalizeItems(raw, source, { now = Date.now(), maxAgeH = 96, ma
     // Aggregator titles look like "Headline - Publisher"
     if (r.origin && title.endsWith(` - ${r.origin}`)) title = title.slice(0, -(r.origin.length + 3)).trim();
     const key = normalizeAr(title);
+    // Arabic sources also publish translated editions; keep only the Arabic originals.
+    if (source.lang === 'ar' && !/[\u0600-\u06FF]/.test(title)) continue;
     if (!key || seen.has(key) || seen.has(r.link)) continue;
     seen.add(key); seen.add(r.link);
     const date = Math.min(r.date ?? now, now);
