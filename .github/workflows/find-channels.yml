@@ -1,0 +1,24 @@
+name: Find YouTube channels
+
+on:
+  workflow_dispatch:
+    inputs:
+      phrases:
+        description: Search phrases separated by |
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  lookup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Look up channels
+        env:
+          PHRASES: ${{ inputs.phrases }}
+        run: node scripts/find-channels.mjs "$PHRASES"
