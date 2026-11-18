@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseFeed, normalizeItems, classify, normalizeAr, decodeBody, stripHtml, parseYouTube, findChannelId } from './feed.mjs';
+import { parseFeed, normalizeItems, classify, normalizeAr, decodeBody, stripHtml, parseYouTube, findChannelId } from '../public/lib/feed.js';
 
 const now = Date.parse('2026-11-18T12:00:00Z');
 const rss = `<?xml version="1.0" encoding="UTF-8"?><rss xmlns:media="http://search.yahoo.com/mrss/"><channel><title>x</title>

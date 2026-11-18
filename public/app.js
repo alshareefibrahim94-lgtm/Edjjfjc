@@ -1,5 +1,11 @@
-// أخبار السعودية — single-page app. Data comes from data/news.json, which the
-// GitHub Actions workflow rebuilds from the publishers' feeds every ~20 minutes.
+// أخبار السعودية — single-page app.
+// On the web, data comes from data/news.json, which the GitHub Actions workflow
+// rebuilds every ~20 minutes. Inside the Android app (NATIVE) the phone collects
+// the feeds itself through the app's local /proxy endpoint and opens stories in
+// a built-in reader view instead of the publisher's page.
+import { decodeBody } from './lib/feed.js';
+
+const NATIVE = location.hostname === 'appassets.androidplatform.net';
 const CATS = { all: 'الكل', local: 'محليات', politics: 'سياسة', economy: 'اقتصاد', sports: 'رياضة', tech: 'تقنية', culture: 'ثقافة ومنوعات' };
 const SUGGESTED = ['رؤية 2030', 'ولي العهد', 'أرامكو', 'الهلال', 'النصر', 'موسم الرياض', 'نيوم', 'الطقس', 'التعليم', 'الإسكان'];
 const PAGE = 40;
@@ -39,9 +45,35 @@ function applyLook() {
 }
 
 /* ---------- data ---------- */
+async function nativeHttp(url) {
+  const res = await fetch(`/proxy?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(25000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return { bytes: new Uint8Array(await res.arrayBuffer()), type: res.headers.get('x-upstream-type') || '', url: res.headers.get('x-final-url') || url };
+}
+
+// Android app: show the last collected news at once, then re-collect on the phone.
+async function loadNative(manual) {
+  const cached = store.get('data', null);
+  if (cached && !state.data) { setData(structuredClone(cached)); render(); renderStatus(); }
+  if (!manual && cached && Date.now() - cached.generatedAt < REFRESH_MS) return;
+  state.busy = true;
+  if (!state.data) render();
+  renderStatus();
+  try {
+    const [{ collect }, sources, channels] = await Promise.all([import('./lib/collect.js'), fetch('sources.json').then((r) => r.json()), fetch('videos.json').then((r) => r.json())]);
+    const data = await collect({ sources, channels, http: nativeHttp, prev: cached });
+    if (!data.items.length) throw new Error('offline');
+    store.set('data', data);
+    setData(data); render();
+  } finally { state.busy = false; }
+}
+
 async function load(manual) {
+  if (state.loading) return;
+  state.loading = true;
   $('#btn-refresh').classList.add('spin');
   try {
+    if (NATIVE) { await loadNative(manual); state.error = ''; return; }
     const res = await fetch(`data/news.json?t=${Math.floor(Date.now() / 60000)}`, { cache: 'no-store' });
     if (!res.ok) throw new Error(res.status === 404 ? 'nodata' : 'http');
     const data = await res.json();
@@ -52,6 +84,7 @@ async function load(manual) {
     state.error = e.message === 'nodata' ? 'nodata' : 'offline';
     if (!state.data || manual) render();
   } finally {
+    state.loading = false;
     $('#btn-refresh').classList.remove('spin');
     renderStatus();
   }
@@ -217,10 +250,10 @@ function viewSettings() {
       <button class="move" data-move="${esc(s.id)}" data-dir="1" aria-label="تحريك ${esc(s.name)} للأسفل" ${k === list.length - 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
     </div>`).join('') || '<p>ستظهر المصادر بعد تحميل الأخبار.</p>'}
   </div>
-  <div class="panel"><h2>تثبيت التطبيق على الهاتف</h2>
+  ${NATIVE ? '' : `<div class="panel"><h2>تثبيت التطبيق على الهاتف</h2>
     ${installEvt ? '<button class="btn wide" data-install>تثبيت الآن</button>' : ''}
     <ol class="steps"><li><b>آيفون (Safari):</b> زر المشاركة ← «إضافة إلى الشاشة الرئيسية».</li><li><b>أندرويد (Chrome):</b> القائمة ⋮ ← «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».</li></ol>
-  </div>`;
+  </div>`}`;
 }
 
 function render() {
@@ -233,8 +266,8 @@ function render() {
   if (state.tab === 'settings') view.innerHTML = viewSettings();
   else if (state.tab === 'saved') view.innerHTML = viewSaved();
   else if (!state.data) {
-    view.innerHTML = state.error === 'nodata'
-      ? '<div class="empty"><b>لم تُجهَّز الأخبار بعد</b>سيجلبها التحديث التلقائي خلال دقائق. اضغط زر التحديث لاحقاً.</div>'
+    view.innerHTML = state.busy ? '<div class="empty"><b>جارٍ جلب الأخبار من المصادر…</b>قد يستغرق ذلك بضع ثوانٍ في أول مرة.</div>'
+      : state.error === 'nodata' ? '<div class="empty"><b>لم تُجهَّز الأخبار بعد</b>سيجلبها التحديث التلقائي خلال دقائق. اضغط زر التحديث لاحقاً.</div>'
       : state.error ? '<div class="empty"><b>تعذّر تحميل الأخبار</b>تحقق من اتصالك بالإنترنت ثم اضغط زر التحديث.</div>'
       : '<div class="empty">جارٍ تحميل الأخبار…</div>';
   } else view.innerHTML = state.tab === 'latest' ? viewLatest() : state.tab === 'video' ? viewVideos() : viewHome();
@@ -246,7 +279,84 @@ function renderStatus() {
   el.classList.toggle('err', !!state.error && !!state.data);
   if (!state.data) { el.textContent = ''; return; }
   const live = state.data.sources.filter((s) => s.count && enabled(s.id)).length;
-  el.textContent = `${state.error ? 'بدون اتصال · ' : ''}آخر تحديث ${ago(state.data.generatedAt)} · ${num(visible({ ignoreCat: true }).length)} خبر من ${num(live)} مصدر`;
+  el.textContent = `${state.busy ? 'جارٍ جلب الأخبار من المصادر… · ' : state.error ? 'بدون اتصال · ' : ''}آخر تحديث ${ago(state.data.generatedAt)} · ${num(visible({ ignoreCat: true }).length)} خبر من ${num(live)} مصدر`;
+}
+
+/* ---------- reader view (Android app) ---------- */
+const articles = new Map();
+const TEXT_TAGS = { P: 'p', H2: 'h3', H3: 'h3', H4: 'h4', H5: 'h4', BLOCKQUOTE: 'blockquote', UL: 'ul', OL: 'ol', LI: 'li', FIGCAPTION: 'figcaption', STRONG: 'strong', B: 'strong', EM: 'em', I: 'em', BR: 'br' };
+
+function absUrl(u, base) {
+  try { const url = new URL(u, base); return /^https?:$/.test(url.protocol) ? url.href.replace(/^http:/, 'https:') : ''; } catch { return ''; }
+}
+
+// Rebuild extracted article HTML from an allow-list of tags, so no publisher
+// markup, scripts, styles or ad containers ever reach the page.
+function cleanArticle(html, base, skipImage) {
+  const src = new DOMParser().parseFromString(html, 'text/html').body;
+  const seen = new Set(skipImage ? [skipImage] : []);
+  const walk = (node, out) => {
+    for (const n of node.childNodes) {
+      if (n.nodeType === 3) { if (n.nodeValue.trim() || out.lastChild) out.append(n.nodeValue); continue; }
+      if (n.nodeType !== 1) continue;
+      if (n.tagName === 'IMG') {
+        const u = absUrl(n.getAttribute('data-src') || n.getAttribute('data-lazy-src') || n.getAttribute('data-original') || n.getAttribute('src') || '', base);
+        if (!u || seen.has(u) || Number(n.getAttribute('width') || 999) < 120) continue;
+        seen.add(u);
+        const img = document.createElement('img');
+        img.src = u; img.alt = n.getAttribute('alt') || ''; img.loading = 'lazy'; img.referrerPolicy = 'no-referrer';
+        out.append(img);
+        continue;
+      }
+      const tag = TEXT_TAGS[n.tagName];
+      if (!tag) { walk(n, out); continue; }
+      const el = document.createElement(tag);
+      walk(n, el);
+      if (tag === 'br' || el.textContent.trim() || el.querySelector('img')) out.append(el);
+    }
+  };
+  const frag = document.createDocumentFragment();
+  walk(src, frag);
+  // A heading before any text is the headline again, which the sheet already shows.
+  if (/^H[34]$/.test(frag.firstElementChild?.tagName)) frag.firstElementChild.remove();
+  return frag;
+}
+
+async function loadArticle(it) {
+  if (articles.has(it.id)) return articles.get(it.id);
+  let url = it.u;
+  if (new URL(url).hostname.endsWith('news.google.com')) {
+    const r = await fetch(`/resolve?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(20000) });
+    if (!r.ok) throw new Error('resolve');
+    url = (await r.json()).url;
+  }
+  const res = await nativeHttp(url);
+  const doc = new DOMParser().parseFromString(decodeBody(res.bytes, res.type), 'text/html');
+  const image = absUrl(doc.querySelector('meta[property="og:image"], meta[name="twitter:image"]')?.content || '', res.url);
+  if (!window.Readability) await new Promise((ok, no) => { const el = document.createElement('script'); el.src = 'lib/readability.js'; el.onload = ok; el.onerror = no; document.head.append(el); });
+  const parsed = new window.Readability(doc).parse();
+  if (!parsed || parsed.textContent.trim().length < 200) throw new Error('short');
+  const art = { url: res.url, image, html: parsed.content };
+  articles.set(it.id, art);
+  return art;
+}
+
+async function showArticle(it) {
+  const box = $('#reader');
+  try {
+    const art = await loadArticle(it);
+    if (sheetItem !== it || !box.isConnected) return;
+    const cover = $('#sheet img.cover');
+    const img = prefs.images && (cover?.src || art.image);
+    if (!cover && img) $('#sheet .grab').insertAdjacentHTML('afterend', `<img class="cover" src="${esc(img)}" alt="" referrerpolicy="no-referrer">`);
+    const body = cleanArticle(art.html, art.url, img);
+    if (!prefs.images) body.querySelectorAll('img').forEach((n) => n.remove());
+    box.replaceChildren(body);
+    $('#sheet .summary')?.remove();
+    $('#sheet a.btn').href = art.url;
+  } catch {
+    if (sheetItem === it && box.isConnected) box.innerHTML = '<p class="hint">تعذّر عرض نص الخبر داخل التطبيق. استخدم زر «فتح الصفحة الأصلية».</p>';
+  }
 }
 
 /* ---------- article sheet ---------- */
@@ -264,16 +374,19 @@ function openSheet(id) {
     ${img ? `<img class="cover" src="${esc(img)}" alt="" referrerpolicy="no-referrer">` : ''}
     <div class="meta"><span class="src" style="--src:${esc(src.color)}"><i class="dot"></i>${esc(src.name)}</span><span>${ago(it.d)}</span><span>${esc(CATS[it.c] || '')}</span></div>
     <h2 id="sheet-title">${esc(it.t)}</h2>
-    ${it.x ? `<p>${esc(it.x)}</p>` : ''}
+    ${it.x ? `<p class="summary">${esc(it.x)}</p>` : ''}
+    ${NATIVE ? '<div class="reader" id="reader"><p class="hint">جارٍ تحميل نص الخبر…</p></div>' : ''}
     <div class="actions" dir="rtl">
-      <a class="btn" href="${esc(httpUrl(it.u))}" target="_blank" rel="noopener noreferrer">قراءة الخبر كاملاً من المصدر ↗</a>
+      <a class="btn${NATIVE ? ' ghost' : ''}" href="${esc(httpUrl(it.u))}" target="_blank" rel="noopener noreferrer">${NATIVE ? 'فتح الصفحة الأصلية ↗' : 'قراءة الخبر كاملاً من المصدر ↗'}</a>
       <button class="btn ghost" data-save>${saved[id] ? '🔖 محفوظ' : 'حفظ'}</button>
       <button class="btn ghost" data-share>مشاركة</button>
       <button class="btn ghost" data-close>إغلاق</button>
     </div>`;
+  sheet.classList.toggle('full', NATIVE);
   sheet.hidden = false; $('#backdrop').hidden = false;
   document.body.style.overflow = 'hidden';
-  sheet.querySelector('a').focus({ preventScroll: true });
+  sheet.scrollTop = 0;
+  if (NATIVE) showArticle(it); else sheet.querySelector('a').focus({ preventScroll: true });
   document.querySelectorAll(`[data-open="${CSS.escape(id)}"]`).forEach((b) => b.classList.add('read'));
 }
 function openVideo(id) {
@@ -284,6 +397,7 @@ function openVideo(id) {
   sheetItem = { t: v.t, u: url };
   const sheet = $('#sheet');
   sheet.dir = 'rtl';
+  sheet.classList.remove('full');
   sheet.innerHTML = `<div class="grab"></div>
     <div class="player"><iframe src="https://www.youtube-nocookie.com/embed/${esc(v.id)}?autoplay=1&playsinline=1&rel=0&hl=ar" title="${esc(v.t)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
     <div class="meta"><span class="src" style="--src:${esc(ch.color)}"><i class="dot"></i>${esc(ch.name)}</span><span>${ago(v.d)}</span></div>
@@ -338,7 +452,8 @@ document.addEventListener('click', async (e) => {
   if ('share' in d && sheetItem) {
     const payload = { title: sheetItem.t, text: sheetItem.t, url: sheetItem.u };
     try {
-      if (navigator.share) await navigator.share(payload);
+      if (window.Native?.share) window.Native.share(payload.title, payload.url);
+      else if (navigator.share) await navigator.share(payload);
       else { await navigator.clipboard.writeText(`${sheetItem.t}\n${sheetItem.u}`); t.textContent = 'تم نسخ الرابط ✓'; }
     } catch { /* user cancelled */ }
     return;
@@ -414,4 +529,10 @@ try {
 } catch { /* Intl calendar unsupported */ }
 render();
 load();
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+// Android back button: close the open story first, then return to the first tab, then exit.
+window.__back = () => {
+  if (!$('#sheet').hidden) { closeSheet(); return true; }
+  if (state.tab !== 'home' || state.query) { $('#searchbar').hidden = true; $('#q').value = ''; state.query = ''; go('home'); return true; }
+  return false;
+};
+if (!NATIVE && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

@@ -197,3 +197,17 @@ ol.steps { margin: .3rem 0 0; padding-inline-start: 1.2rem; font-size: .86rem; c
   main { max-width: none; }
   .grid { grid-template-columns: 1fr 1fr; column-gap: calc(env(viewport-segment-left 1 0, 0px) - env(viewport-segment-right 0 0, 0px) + 2rem); }
 }
+
+/* Reader view (Android app) */
+.sheet.full { inset: 0; max-height: none; max-width: none; width: auto; transform: none; border-radius: 0; padding-top: env(safe-area-inset-top); }
+.sheet.full > * { max-width: 44rem; margin-inline: auto; }
+.sheet.full .grab { visibility: hidden; margin: .3rem auto; }
+.sheet.full img.cover { max-height: 22rem; display: block; }
+.reader { font-size: 1.06rem; line-height: 2; margin-bottom: 1.2rem; overflow-wrap: anywhere; }
+.reader p { color: var(--ink); font-size: inherit; margin: 0 0 1.1rem; }
+.reader h3, .reader h4 { margin: 1.4rem 0 .5rem; line-height: 1.6; }
+.reader img { display: block; max-width: 100%; height: auto; border-radius: 14px; margin: 1rem auto; }
+.reader blockquote { margin: 1rem 0; padding: .2rem 1rem; border-inline-start: 3px solid var(--accent); color: var(--muted); }
+.reader figcaption { font-size: .8rem; color: var(--muted); text-align: center; margin-top: -.5rem; }
+.reader ul, .reader ol { padding-inline-start: 1.3rem; }
+.hint { font-size: .82rem; color: var(--muted); text-align: center; margin: 1rem 0; }

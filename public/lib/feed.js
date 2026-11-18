@@ -1,5 +1,5 @@
 // Dependency-free RSS/Atom parsing and item normalisation helpers.
-import { createHash } from 'node:crypto';
+// Runs unchanged in Node (scheduled fetch) and in the browser (Android app).
 
 const NAMED = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', laquo: '«', raquo: '»', ndash: '–', mdash: '—', hellip: '…', rlm: '', lrm: '', zwnj: '' };
 
@@ -86,7 +86,7 @@ export function parseFeed(xml) {
 
 /** Decode a fetched body honouring the charset from headers or the XML prolog. */
 export function decodeBody(buf, contentType = '') {
-  const head = Buffer.from(buf.slice(0, 200)).toString('latin1');
+  const head = String.fromCharCode(...buf.slice(0, 200));
   const cs = (contentType.match(/charset=([\w-]+)/i) || head.match(/encoding=["']([\w-]+)["']/i) || [])[1] || 'utf-8';
   try { return new TextDecoder(cs).decode(buf); } catch { return new TextDecoder('utf-8').decode(buf); }
 }
@@ -120,7 +120,16 @@ export function classify(text, fallback = 'local') {
 const SAUDI_RE = /سعودي|المملكه|الرياض|جده|مكه|المدينه المنوره|الدمام|نيوم|ارامكو|ولي العهد|خادم الحرمين|saudi|riyadh|jeddah/;
 export const mentionsSaudi = (text) => SAUDI_RE.test(normalizeAr(text));
 
-export const itemId = (link) => createHash('sha1').update(link).digest('hex').slice(0, 12);
+/** Stable 12-hex-digit id for a link (two FNV-1a passes; not cryptographic). */
+export function itemId(link) {
+  let a = 0x811c9dc5, b = 0x01000193;
+  for (let i = 0; i < link.length; i++) {
+    const c = link.charCodeAt(i);
+    a = Math.imul(a ^ c, 0x01000193) >>> 0;
+    b = Math.imul(b ^ (c + i), 0x811c9dc5) >>> 0;
+  }
+  return (a.toString(16).padStart(8, '0') + b.toString(16).padStart(8, '0')).slice(0, 12);
+}
 
 /** Turn raw parsed items into the compact shape the app consumes. */
 export function normalizeItems(raw, source, { now = Date.now(), maxAgeH = 96, max = 30 } = {}) {
