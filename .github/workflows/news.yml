@@ -40,9 +40,13 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/configure-pages@v5
+      # Until Pages is switched on in the repository settings there is nowhere
+      # to deploy to; skip with a warning instead of failing every scheduled run.
+      - id: pages
+        uses: actions/configure-pages@v5
         continue-on-error: true
-        with:
-          enablement: true
+      - if: steps.pages.outcome != 'success'
+        run: echo "::warning::GitHub Pages is not enabled. Set Settings → Pages → Source to GitHub Actions to publish the app."
       - id: deploy
+        if: steps.pages.outcome == 'success'
         uses: actions/deploy-pages@v4
