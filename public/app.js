@@ -14,6 +14,7 @@ const CLUB_STRICT = /نادي الاتحاد|فريق الاتحاد|بنزيم�
 const CLUB_LOOSE = /الاتحاد|العميد|ittihad/;
 const CLUB_NOT = /الاتحاد (الاوروبي|الدولي|الاسيوي|العربي|الخليجي|الافريقي|الانجليزي|الاسباني|الايطالي|الالماني|الفرنسي|المصري|الاماراتي|السعودي ل|للطيران)|اتحاد (الكره|القدم|كره|اللعبه|الغرف)|طيران الاتحاد|الاتحاد السكندري|اتحاد جده لل|etihad/;
 const RUMOR = /صفق|انتقال|ينتقل|مفاوضات|يفاوض|تفاوض|عرض |عرضا|يقترب|تعاقد|رحيل|يرحل|تجديد|يجدد|شائع|مصادر|ميركاتو|يضم |اعاره|فسخ|بديل/;
+const GAME_RUMOR = /rumou?r|leak|reportedly|insider|allegedly|datamine|تسريب|مسرب|شائع|اشاع|مصادر/;
 const CLUB_LINKS = [
   ['إكس (تويتر)', [['الحساب الرسمي @ittihad', 'https://x.com/ittihad'], ['آخر التغريدات: #الاتحاد', 'https://x.com/search?q=%23%D8%A7%D9%84%D8%A7%D8%AA%D8%AD%D8%A7%D8%AF&f=live'], ['آخر التغريدات: #العميد', 'https://x.com/search?q=%23%D8%A7%D9%84%D8%B9%D9%85%D9%8A%D8%AF&f=live'], ['صفقات وشائعات الاتحاد', 'https://x.com/search?q=%D8%A7%D9%84%D8%A7%D8%AA%D8%AD%D8%A7%D8%AF%20(%D8%B5%D9%81%D9%82%D8%A9%20OR%20%D9%85%D9%81%D8%A7%D9%88%D8%B6%D8%A7%D8%AA%20OR%20%D8%A7%D9%86%D8%AA%D9%82%D8%A7%D9%84)&f=live']]],
   ['تيك توك', [['الحساب الرسمي @ittihadclub', 'https://www.tiktok.com/@ittihadclub'], ['وسم #الاتحاد', 'https://www.tiktok.com/tag/%D8%A7%D9%84%D8%A7%D8%AA%D8%AD%D8%A7%D8%AF'], ['بحث: نادي الاتحاد', 'https://www.tiktok.com/search?q=%D9%86%D8%A7%D8%AF%D9%8A%20%D8%A7%D9%84%D8%A7%D8%AA%D8%AD%D8%A7%D8%AF']]],
@@ -122,8 +123,18 @@ function setData(data) {
   const seen = new Set();
   state.clubItems = [...data.items.filter(isClub), ...topic.filter((it) => !CLUB_NOT.test(it.n) && CLUB_LOOSE.test(it.n))]
     .filter((it) => !seen.has(it.n) && seen.add(it.n)).sort((a, b) => b.d - a.d);
-  state.gameItems = data.gaming?.items || [];
-  for (const it of state.gameItems) it.n = norm(`${it.t} ${it.x || ''}`);
+  // Gaming: publisher feeds plus rumour/leak searches in both languages.
+  const gSeen = new Set();
+  state.gameItems = [
+    ...(data.gaming?.items || []),
+    ...(data.topics?.['gaming-rumors'] || []).map((it) => ({ ...it, l: 'en', r: 1 })),
+    ...(data.topics?.['gaming-rumors-ar'] || []).map((it) => ({ ...it, l: 'ar' })),
+  ].filter((it) => {
+    it.n = norm(`${it.t} ${it.x || ''}`);
+    it.l ||= state.byId[it.s]?.lang || 'ar';
+    it.r ||= state.byId[it.s]?.rumor || GAME_RUMOR.test(it.n) ? 1 : 0;
+    return !gSeen.has(it.n) && gSeen.add(it.n);
+  }).sort((a, b) => b.d - a.d);
   state.gameVideos = data.videos.filter((v) => state.vById[v.s].section === 'gaming');
   data.videos = data.videos.filter((v) => !state.vById[v.s].section); // section channels stay out of the general video tab
   data.videoSources = data.videoSources.filter((s) => !s.section);
@@ -144,7 +155,7 @@ const matchesInterest = (it) => prefs.keywords.some((k) => it.n.includes(norm(k)
 
 /* ---------- pieces ---------- */
 function itemRow(it, { showSource = true } = {}) {
-  const src = state.byId[it.s] || { name: it.sn || '', color: '', lang: 'ar' };
+  const src = state.byId[it.s] || { name: it.sn || '', color: '', lang: it.l || 'ar' };
   const img = prefs.images && httpUrl(it.i);
   return `<button class="item${read.has(it.id) ? ' read' : ''}" data-open="${esc(it.id)}"${src.lang === 'ar' ? '' : ' dir="ltr"'}>
     <span class="item-body">
@@ -218,12 +229,12 @@ function viewVideos() {
 function viewGaming() {
   const q = norm(state.query);
   const seg = `<div class="club-hero game"><b>الألعاب · Gaming</b><span>آخر أخبار الألعاب من أكبر المواقع وصنّاع المحتوى</span></div>
-    <div class="seg plat">${[['all', 'الكل'], ['ar', 'عربي'], ['en', 'English'], ['video', 'فيديو']].map(([k, l]) => `<button data-game="${k}" class="${state.game === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+    <div class="seg plat">${[['all', 'الكل'], ['rumors', 'تسريبات'], ['ar', 'عربي'], ['en', 'English'], ['video', 'فيديو']].map(([k, l]) => `<button data-game="${k}" class="${state.game === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
   if (state.game === 'video') {
     const vids = state.gameVideos.filter((v) => !q || norm(v.t).includes(q));
     return seg + (vids.length ? `<div class="vgrid">${vids.slice(0, state.limit).map(videoCard).join('')}</div>${vids.length > state.limit ? `<button class="btn ghost wide" data-more>عرض المزيد (${num(vids.length - state.limit)})</button>` : ''}` : '<div class="empty"><b>لا توجد مقاطع حالياً</b></div>');
   }
-  const items = state.gameItems.filter((it) => (!q || it.n.includes(q)) && (state.game === 'all' || state.byId[it.s]?.lang === state.game));
+  const items = state.gameItems.filter((it) => (!q || it.n.includes(q)) && (state.game === 'all' || (state.game === 'rumors' ? it.r : it.l === state.game)));
   return seg + listView(items, 'لا توجد أخبار ألعاب حالياً');
 }
 
@@ -432,7 +443,7 @@ function openSheet(id) {
   if (!it) return;
   sheetItem = it;
   read.add(id); store.set('read', [...read].slice(-600));
-  const src = state.byId[it.s] || { name: it.sn || '', color: '', lang: 'ar' };
+  const src = state.byId[it.s] || { name: it.sn || '', color: '', lang: it.l || 'ar' };
   const img = prefs.images && httpUrl(it.i);
   const sheet = $('#sheet');
   sheet.dir = src.lang === 'ar' ? 'rtl' : 'ltr';

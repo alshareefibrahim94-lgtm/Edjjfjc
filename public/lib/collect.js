@@ -132,7 +132,7 @@ export async function collect({ sources, channels, topics = [], gaming = [], htt
     }
     gItems.push(...got);
     log(`${src.id.padEnd(15)} ${via.padEnd(7)} ${String(got.length).padStart(2)}  [${l.join(' | ')}]`);
-    return { id: src.id, name: src.name, color: src.color, lang: src.lang, via, count: got.length };
+    return { id: src.id, name: src.name, color: src.color, lang: src.lang, via, count: got.length, ...(src.rumor && { rumor: true }) };
   });
   gItems.sort((a, b) => b.d - a.d);
 

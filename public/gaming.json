@@ -6,7 +6,7 @@
   {"id": "g-pcgamer", "name": "PC Gamer", "full": "PC Gamer", "color": "#d32f2f", "lang": "en", "domain": "pcgamer.com", "feeds": ["https://www.pcgamer.com/rss/"]},
   {"id": "g-polygon", "name": "Polygon", "full": "Polygon", "color": "#ff0a5f", "lang": "en", "domain": "polygon.com", "feeds": ["https://www.polygon.com/rss/index.xml"]},
   {"id": "g-kotaku", "name": "Kotaku", "full": "Kotaku", "color": "#f26522", "lang": "en", "domain": "kotaku.com", "feeds": ["https://kotaku.com/rss"]},
-  {"id": "g-insidergaming", "name": "Insider Gaming", "full": "Insider Gaming", "color": "#5b8def", "lang": "en", "domain": "insider-gaming.com", "feeds": ["https://insider-gaming.com/feed/"]},
+  {"id": "g-insidergaming", "name": "Insider Gaming", "full": "Insider Gaming", "color": "#5b8def", "lang": "en", "domain": "insider-gaming.com", "feeds": ["https://insider-gaming.com/feed/"], "rumor": true},
   {"id": "g-psblog", "name": "PlayStation Blog", "full": "PlayStation Blog", "color": "#0070d1", "lang": "en", "domain": "blog.playstation.com", "feeds": ["https://blog.playstation.com/feed/"]},
   {"id": "g-xboxwire", "name": "Xbox Wire", "full": "Xbox Wire", "color": "#107c10", "lang": "en", "domain": "news.xbox.com", "feeds": ["https://news.xbox.com/en-us/feed/"]},
   {"id": "g-nintendolife", "name": "Nintendo Life", "full": "Nintendo Life", "color": "#e60012", "lang": "en", "domain": "nintendolife.com", "feeds": ["https://www.nintendolife.com/feeds/latest"]},
@@ -14,5 +14,14 @@
   {"id": "g-saudigamer", "name": "سعودي جيمر", "full": "سعودي جيمر", "color": "#00a651", "lang": "ar", "domain": "saudigamer.com", "feeds": ["https://saudigamer.com/feed/"]},
   {"id": "g-truegaming", "name": "ترو جيمنج", "full": "ترو جيمنج", "color": "#1e88e5", "lang": "ar", "domain": "true-gaming.net", "feeds": ["https://www.true-gaming.net/home/feed/"]},
   {"id": "g-vga4a", "name": "VGA4A", "full": "VGA4A", "color": "#7e57c2", "lang": "ar", "domain": "vga4a.com", "feeds": ["https://www.vga4a.com/feed/"]},
-  {"id": "g-arabhardware", "name": "عرب هاردوير", "full": "عرب هاردوير", "color": "#ef6c00", "lang": "ar", "domain": "arabhardware.net", "feeds": ["https://arabhardware.net/feed"]}
+  {"id": "g-arabhardware", "name": "عرب هاردوير", "full": "عرب هاردوير", "color": "#ef6c00", "lang": "ar", "domain": "arabhardware.net", "feeds": ["https://arabhardware.net/feed"]},
+  {"id": "g-gamesradar", "name": "GamesRadar+", "full": "GamesRadar+", "color": "#e4002b", "lang": "en", "domain": "gamesradar.com", "feeds": ["https://www.gamesradar.com/rss/"]},
+  {"id": "g-rps", "name": "Rock Paper Shotgun", "full": "Rock Paper Shotgun", "color": "#d6336c", "lang": "en", "domain": "rockpapershotgun.com", "feeds": ["https://www.rockpapershotgun.com/feed"]},
+  {"id": "g-vg247", "name": "VG247", "full": "VG247", "color": "#00a3e0", "lang": "en", "domain": "vg247.com", "feeds": ["https://www.vg247.com/feed"]},
+  {"id": "g-gamerant", "name": "Game Rant", "full": "Game Rant", "color": "#f0b400", "lang": "en", "domain": "gamerant.com", "feeds": ["https://gamerant.com/feed/"]},
+  {"id": "g-pushsquare", "name": "Push Square", "full": "Push Square", "color": "#1565c0", "lang": "en", "domain": "pushsquare.com", "feeds": ["https://www.pushsquare.com/feeds/latest"]},
+  {"id": "g-purexbox", "name": "Pure Xbox", "full": "Pure Xbox", "color": "#2e7d32", "lang": "en", "domain": "purexbox.com", "feeds": ["https://www.purexbox.com/feeds/latest"]},
+  {"id": "g-gibiz", "name": "GamesIndustry.biz", "full": "GamesIndustry.biz", "color": "#546e7a", "lang": "en", "domain": "gamesindustry.biz", "feeds": ["https://www.gamesindustry.biz/feed"]},
+  {"id": "g-mp1st", "name": "MP1st", "full": "MP1st", "color": "#8e24aa", "lang": "en", "domain": "mp1st.com", "feeds": ["https://mp1st.com/feed"], "rumor": true},
+  {"id": "g-leaks", "name": "r/GamingLeaksAndRumours", "full": "r/GamingLeaksAndRumours", "color": "#ff4500", "lang": "en", "domain": "reddit.com", "feeds": ["https://www.reddit.com/r/GamingLeaksAndRumours/new/.rss"], "query": "GamingLeaksAndRumours", "rumor": true}
 ]

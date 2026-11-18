@@ -7,5 +7,23 @@
       "نادي الاتحاد بنزيما OR العميد OR النمور",
       "نادي الاتحاد صفقة OR انتقال OR مفاوضات OR ميركاتو"
     ]
+  },
+  {
+    "id": "gaming-rumors",
+    "lang": "en",
+    "queries": [
+      "video game rumor OR rumour OR leak",
+      "game leak insider reportedly PS5 OR Xbox OR Nintendo OR PC",
+      "GTA 6 OR \"Switch 2\" OR PlayStation OR Xbox leak OR rumor"
+    ]
+  },
+  {
+    "id": "gaming-rumors-ar",
+    "lang": "ar",
+    "queries": [
+      "ألعاب تسريبات OR شائعات OR إشاعة",
+      "لعبة تسريب OR مسرب بلايستيشن OR إكسبوكس OR نينتندو",
+      "أخبار الألعاب اليوم"
+    ]
   }
 ]
