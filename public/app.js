@@ -472,14 +472,17 @@ function openVideo(id) {
   const ch = state.vById[v.s];
   const url = `https://www.youtube.com/watch?v=${v.id}`;
   sheetItem = { t: v.t, u: url };
+  // Player language follows the video: Arabic stays Arabic, everything else
+  // (English or any other language) gets the English player, audio track and captions.
+  const lang = /[\u0600-\u06FF]/.test(v.t) ? 'ar' : 'en';
   const sheet = $('#sheet');
-  sheet.dir = 'rtl';
+  sheet.dir = lang === 'ar' ? 'rtl' : 'ltr';
   sheet.classList.remove('full');
   sheet.innerHTML = `<div class="grab"></div>
-    <div class="player"><iframe src="https://www.youtube-nocookie.com/embed/${esc(v.id)}?autoplay=1&playsinline=1&rel=0&hl=ar" title="${esc(v.t)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+    <div class="player"><iframe src="https://www.youtube-nocookie.com/embed/${esc(v.id)}?autoplay=1&playsinline=1&rel=0&hl=${lang}&cc_lang_pref=${lang}" title="${esc(v.t)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
     <div class="meta"><span class="src" style="--src:${esc(ch.color)}"><i class="dot"></i>${esc(ch.name)}</span><span>${ago(v.d)}</span></div>
     <h2 id="sheet-title">${esc(v.t)}</h2>
-    <div class="actions">
+    <div class="actions" dir="rtl">
       <a class="btn" href="${esc(url)}" target="_blank" rel="noopener noreferrer">فتح في يوتيوب ↗</a>
       <button class="btn ghost" data-share>مشاركة</button>
       <button class="btn ghost" data-close>إغلاق</button>
