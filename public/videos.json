@@ -1,4 +1,5 @@
 [
+  {"id": "ittihadclub", "name": "نادي الاتحاد", "color": "#ffd100", "club": true, "handles": ["ittihadclub", "ittihad", "alittihadclub", "ittihadfc"]},
   {"id": "alekhbariya", "name": "الإخبارية", "color": "#37474f", "handles": ["alekhbariyatv", "AlEkhbariyaTV", "alekhbariya"], "channelId": "UCcmHPJzsho2Hr4AhNO6m09w"},
   {"id": "alarabiya", "name": "العربية", "color": "#ef6c00", "handles": ["AlArabiya", "alarabiya"], "channelId": "UCahpxixMCwoANAftn6IxkTg"},
   {"id": "aljazeera", "name": "الجزيرة", "color": "#c8a03c", "handles": ["aljazeera", "AlJazeeraChannel", "aljazeeraarabic"], "channelId": "UCfiwzLy-8yKzIbsmZTzxDgw"},
@@ -8,5 +9,6 @@
   {"id": "asharq", "name": "الشرق للأخبار", "color": "#b71c1c", "handles": ["AsharqNews", "asharqnews"], "channelId": "UCRJUVYt9gjg8MnlGacySUdg"},
   {"id": "ssc", "name": "SSC الرياضية", "color": "#558b2f", "handles": ["ssc_sports", "SSCSports"], "channelId": "UCXichv4XKps2gKNGh7yVPIw"},
   {"id": "saudiatv", "name": "القناة السعودية", "color": "#00695c", "handles": ["saudiatv", "SaudiTV"], "channelId": "UCWHvikBeCwBnEopmwkekwZg"},
-  {"id": "rotana", "name": "روتانا خليجية", "color": "#4527a0", "handles": ["Khalejiatv", "RotanaKhalijia"], "channelId": "UCsVQJ4sjopcYEQHxWnS2Spg"}
+  {"id": "rotana", "name": "روتانا خليجية", "color": "#4527a0", "handles": ["Khalejiatv", "RotanaKhalijia"], "channelId": "UCsVQJ4sjopcYEQHxWnS2Spg"},
+  {"id": "spl", "name": "دوري روشن", "color": "#1b5e20", "handles": ["SPL", "spl", "SaudiProLeague"]}
 ]

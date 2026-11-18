@@ -63,12 +63,28 @@ async function loadVideos(ch, text, now) {
   return { vids: [], log };
 }
 
-export async function collect({ sources, channels, http, prev = null, log = () => {} }) {
+// A topic (e.g. a football club) is followed through news searches rather than
+// one publisher's feed; each item keeps its publisher's name in `sn`.
+async function loadTopic(topic, text) {
+  const g = topic.lang === 'en' ? 'hl=en&gl=SA&ceid=SA:en' : 'hl=ar&gl=SA&ceid=SA:ar';
+  const log = [];
+  const raw = (await Promise.all(topic.queries.map(async (q) => {
+    try {
+      const got = parseFeed(await text(`https://news.google.com/rss/search?q=${encodeURIComponent(q + ' when:3d')}&${g}`));
+      log.push(String(got.length));
+      return got;
+    } catch (e) { log.push(`✗ ${why(e)}`); return []; }
+  }))).flat().map((r) => ({ ...r, aggregated: true, image: '' }));
+  return { items: normalizeItems(raw, { id: topic.id, cat: 'sports', topic: true }, { max: 80 }), log };
+}
+
+export async function collect({ sources, channels, topics = [], http, prev = null, log = () => {} }) {
   const text = async (url) => { const r = await http(url); return decodeBody(r.bytes, r.type); };
   const now = Date.now();
-  const [results, vResults] = await Promise.all([
+  const [results, vResults, tResults] = await Promise.all([
     Promise.all(sources.map((s) => loadSource(s, text))),
     Promise.all(channels.map((c) => loadVideos(c, text, now))),
+    Promise.all(topics.map((t) => loadTopic(t, text))),
   ]);
 
   const items = [];
@@ -91,9 +107,18 @@ export async function collect({ sources, channels, http, prev = null, log = () =
     if (!vids.length && prev?.videos) { vids = prev.videos.filter((v) => v.s === ch.id); if (vids.length) l.push('stale'); }
     videos.push(...vids);
     log(`${ch.id.padEnd(13)} ${String(vids.length).padStart(2)}  [${l.join(' | ')}]`);
-    return { id: ch.id, name: ch.name, color: ch.color, count: vids.length };
+    return { id: ch.id, name: ch.name, color: ch.color, count: vids.length, ...(ch.club && { club: true }) };
   });
   videos.sort((a, b) => b.d - a.d);
 
-  return { generatedAt: now, sources: meta, items, videoSources, videos };
+  log('\nTopics');
+  const topicItems = {};
+  topics.forEach((t, k) => {
+    let { items: got, log: l } = tResults[k];
+    if (!got.length && prev?.topics?.[t.id]) { got = prev.topics[t.id].filter((i) => now - i.d < MAX_AGE); l.push('stale'); }
+    topicItems[t.id] = got;
+    log(`${t.id.padEnd(13)} ${String(got.length).padStart(2)}  [${l.join(' | ')}]`);
+  });
+
+  return { generatedAt: now, sources: meta, items, videoSources, videos, topics: topicItems };
 }

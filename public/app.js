@@ -8,6 +8,17 @@ import { decodeBody } from './lib/feed.js';
 const NATIVE = location.hostname === 'appassets.androidplatform.net';
 const CATS = { all: 'الكل', local: 'محليات', politics: 'سياسة', economy: 'اقتصاد', sports: 'رياضة', tech: 'تقنية', culture: 'ثقافة ومنوعات' };
 const SUGGESTED = ['رؤية 2030', 'ولي العهد', 'أرامكو', 'الهلال', 'النصر', 'موسم الرياض', 'نيوم', 'الطقس', 'التعليم', 'الإسكان'];
+// Al-Ittihad Club section. News is matched by wording; "الاتحاد" alone is
+// ambiguous (federations, the EU, the airline), hence the exclusions.
+const CLUB_STRICT = /نادي الاتحاد|فريق الاتحاد|بنزيما|الاتحاديين|جماهير الاتحاد|جمهور الاتحاد|مدرب الاتحاد|لاعب الاتحاد|لاعبي الاتحاد|al.?ittihad/;
+const CLUB_LOOSE = /الاتحاد|العميد|ittihad/;
+const CLUB_NOT = /الاتحاد (الاوروبي|الدولي|الاسيوي|العربي|الخليجي|الافريقي|الانجليزي|الاسباني|الايطالي|الالماني|الفرنسي|المصري|الاماراتي|السعودي ل|للطيران)|اتحاد (الكره|القدم|كره|اللعبه|الغرف)|طيران الاتحاد|الاتحاد السكندري|اتحاد جده لل|etihad/;
+const RUMOR = /صفق|انتقال|ينتقل|مفاوضات|يفاوض|تفاوض|عرض |عرضا|يقترب|تعاقد|رحيل|يرحل|تجديد|يجدد|شائع|مصادر|ميركاتو|يضم |اعاره|فسخ|بديل/;
+const CLUB_LINKS = [
+  ['إكس (تويتر)', [['الحساب الرسمي @ittihad', 'https://x.com/ittihad'], ['آخر التغريدات: #الاتحاد', 'https://x.com/search?q=%23%D8%A7%D9%84%D8%A7%D8%AA%D8%AD%D8%A7%D8%AF&f=live'], ['آخر التغريدات: #العميد', 'https://x.com/search?q=%23%D8%A7%D9%84%D8%B9%D9%85%D9%8A%D8%AF&f=live'], ['صفقات وشائعات الاتحاد', 'https://x.com/search?q=%D8%A7%D9%84%D8%A7%D8%AA%D8%AD%D8%A7%D8%AF%20(%D8%B5%D9%81%D9%82%D8%A9%20OR%20%D9%85%D9%81%D8%A7%D9%88%D8%B6%D8%A7%D8%AA%20OR%20%D8%A7%D9%86%D8%AA%D9%82%D8%A7%D9%84)&f=live']]],
+  ['تيك توك', [['الحساب الرسمي @ittihadclub', 'https://www.tiktok.com/@ittihadclub'], ['وسم #الاتحاد', 'https://www.tiktok.com/tag/%D8%A7%D9%84%D8%A7%D8%AA%D8%AD%D8%A7%D8%AF'], ['بحث: نادي الاتحاد', 'https://www.tiktok.com/search?q=%D9%86%D8%A7%D8%AF%D9%8A%20%D8%A7%D9%84%D8%A7%D8%AA%D8%AD%D8%A7%D8%AF']]],
+  ['يوتيوب', [['القناة الرسمية', 'https://www.youtube.com/@ittihadclub'], ['أحدث المقاطع عن نادي الاتحاد', 'https://www.youtube.com/results?search_query=%D9%86%D8%A7%D8%AF%D9%8A+%D8%A7%D9%84%D8%A7%D8%AA%D8%AD%D8%A7%D8%AF&sp=CAI%253D']]],
+];
 const PAGE = 40;
 const REFRESH_MS = 5 * 60 * 1000;
 
@@ -21,7 +32,7 @@ const prefs = { theme: 'auto', font: 1, perWidget: 4, images: true, order: [], o
 const saved = store.get('saved', {});
 const read = new Set(store.get('read', []));
 const lastVisit = store.get('lastVisit', 0);
-const state = { data: null, byId: {}, tab: 'home', cat: 'all', vsrc: 'all', vById: {}, query: '', filter: null, limit: PAGE, error: '' };
+const state = { data: null, byId: {}, tab: 'home', cat: 'all', vsrc: 'all', vById: {}, club: 'news', clubItems: [], clubVideos: [], query: '', filter: null, limit: PAGE, error: '' };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (n) => n.toLocaleString('ar-SA');
@@ -60,8 +71,8 @@ async function loadNative(manual) {
   if (!state.data) render();
   renderStatus();
   try {
-    const [{ collect }, sources, channels] = await Promise.all([import('./lib/collect.js'), fetch('sources.json').then((r) => r.json()), fetch('videos.json').then((r) => r.json())]);
-    const data = await collect({ sources, channels, http: nativeHttp, prev: cached });
+    const [{ collect }, sources, channels, topics] = await Promise.all([import('./lib/collect.js'), ...['sources.json', 'videos.json', 'topics.json'].map((f) => fetch(f).then((r) => r.json()))]);
+    const data = await collect({ sources, channels, topics, http: nativeHttp, prev: cached });
     if (!data.items.length) throw new Error('offline');
     store.set('data', data);
     setData(data); render();
@@ -103,6 +114,14 @@ function setData(data) {
   }
   savePrefs();
   for (const it of data.items) it.n = norm(`${it.t} ${it.x || ''}`);
+  // Club section: topic search results plus matching stories from the regular sources.
+  const topic = data.topics?.ittihad || [];
+  for (const it of topic) it.n = norm(it.t);
+  const isClub = (it) => !CLUB_NOT.test(it.n) && (CLUB_STRICT.test(it.n) || (it.c === 'sports' && CLUB_LOOSE.test(it.n)));
+  const seen = new Set();
+  state.clubItems = [...data.items.filter(isClub), ...topic.filter((it) => !CLUB_NOT.test(it.n) && CLUB_LOOSE.test(it.n))]
+    .filter((it) => !seen.has(it.n) && seen.add(it.n)).sort((a, b) => b.d - a.d);
+  state.clubVideos = data.videos.filter((v) => state.vById[v.s].club || (!CLUB_NOT.test(norm(v.t)) && CLUB_LOOSE.test(norm(v.t))));
 }
 
 const orderedSources = () => prefs.order.map((id) => state.byId[id]).filter(Boolean);
@@ -190,6 +209,22 @@ function viewVideos() {
     ${vids.length > state.limit ? `<button class="btn ghost wide" data-more>عرض المزيد (${num(vids.length - state.limit)})</button>` : ''}`;
 }
 
+function viewClub() {
+  const q = norm(state.query);
+  const items = state.clubItems.filter((it) => (!q || it.n.includes(q)) && (state.club !== 'rumors' || RUMOR.test(it.n)));
+  const seg = `<div class="club-hero"><b>نادي الاتحاد</b><span>العميد · كل ما يخص النمور في مكان واحد</span></div>
+    <div class="seg plat">${[['news', 'الأخبار'], ['rumors', 'الصفقات'], ['video', 'فيديو'], ['social', 'التطبيقات']].map(([k, l]) => `<button data-club="${k}" class="${state.club === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  if (state.club === 'video') {
+    const vids = state.clubVideos.filter((v) => !q || norm(v.t).includes(q));
+    return seg + (vids.length ? `<div class="vgrid">${vids.slice(0, state.limit).map(videoCard).join('')}</div>` : '<div class="empty"><b>لا توجد مقاطع حالياً</b>جرّب قسم «التطبيقات» لفتح يوتيوب مباشرة.</div>');
+  }
+  if (state.club === 'social') {
+    return `${seg}<p class="hint">تُفتح هذه الروابط مباشرة في تطبيقات إكس وتيك توك ويوتيوب على هاتفك.</p>${CLUB_LINKS.map(([name, links]) => `<div class="panel"><h2>${esc(name)}</h2>
+      ${links.map(([label, url]) => `<a class="src-row link" href="${esc(url)}" target="_blank" rel="noopener noreferrer"><b>${esc(label)}</b><span class="more">فتح ↗</span></a>`).join('')}</div>`).join('')}`;
+  }
+  return seg + listView(items, state.club === 'rumors' ? 'لا توجد أخبار صفقات حالياً' : 'لا توجد أخبار عن الاتحاد حالياً');
+}
+
 /* ---------- views ---------- */
 function viewHome() {
   const items = visible();
@@ -258,7 +293,15 @@ function viewSettings() {
 
 function render() {
   const view = $('#view');
-  $('#cats').hidden = state.tab === 'saved' || state.tab === 'settings';
+  $('#cats').hidden = state.tab === 'saved' || state.tab === 'settings' || state.tab === 'club';
+  // The club section carries its own yellow-and-black look.
+  const club = state.tab === 'club';
+  if (club !== (document.documentElement.dataset.section === 'ittihad')) {
+    if (club) document.documentElement.dataset.section = 'ittihad'; else delete document.documentElement.dataset.section;
+    const bar = club ? '#000000' : '#0a7a45';
+    document.querySelector('meta[name="theme-color"]').content = bar;
+    window.Native?.theme?.(bar);
+  }
   $('#cats').innerHTML = state.tab === 'video'
     ? [['all', 'كل القنوات'], ...(state.data?.videoSources || []).filter((s) => s.count).map((s) => [s.id, s.name])].map(([k, l]) => `<button class="chip${state.vsrc === k ? ' on' : ''}" data-vsrc="${esc(k)}">${esc(l)}</button>`).join('')
     : Object.entries(CATS).map(([k, l]) => `<button class="chip${state.cat === k ? ' on' : ''}" data-cat="${k}">${l}</button>`).join('');
@@ -270,12 +313,12 @@ function render() {
       : state.error === 'nodata' ? '<div class="empty"><b>لم تُجهَّز الأخبار بعد</b>سيجلبها التحديث التلقائي خلال دقائق. اضغط زر التحديث لاحقاً.</div>'
       : state.error ? '<div class="empty"><b>تعذّر تحميل الأخبار</b>تحقق من اتصالك بالإنترنت ثم اضغط زر التحديث.</div>'
       : '<div class="empty">جارٍ تحميل الأخبار…</div>';
-  } else view.innerHTML = state.tab === 'latest' ? viewLatest() : state.tab === 'video' ? viewVideos() : viewHome();
+  } else view.innerHTML = state.tab === 'latest' ? viewLatest() : state.tab === 'video' ? viewVideos() : state.tab === 'club' ? viewClub() : viewHome();
 }
 
 function renderStatus() {
   const el = $('#status');
-  el.hidden = state.tab === 'saved' || state.tab === 'settings' || state.tab === 'video';
+  el.hidden = ['saved', 'settings', 'video', 'club'].includes(state.tab);
   el.classList.toggle('err', !!state.error && !!state.data);
   if (!state.data) { el.textContent = ''; return; }
   const live = state.data.sources.filter((s) => s.count && enabled(s.id)).length;
@@ -362,7 +405,7 @@ async function showArticle(it) {
 /* ---------- article sheet ---------- */
 let sheetItem = null;
 function openSheet(id) {
-  const it = state.data?.items.find((i) => i.id === id) || saved[id];
+  const it = state.data?.items.find((i) => i.id === id) || state.clubItems.find((i) => i.id === id) || saved[id];
   if (!it) return;
   sheetItem = it;
   read.add(id); store.set('read', [...read].slice(-600));
@@ -436,6 +479,7 @@ document.addEventListener('click', async (e) => {
   if (d.cat) { state.cat = d.cat; state.limit = PAGE; render(); renderStatus(); return; }
   if (d.open) return openSheet(d.open);
   if (d.video) return openVideo(d.video);
+  if (d.club) { state.club = d.club; state.limit = PAGE; return render(); }
   if (d.vsrc) { state.vsrc = d.vsrc; state.limit = PAGE; return render(); }
   if (d.filter) { const f = JSON.parse(d.filter); return go('latest', f.all ? null : f); }
   if ('clearFilter' in d) return go('latest');

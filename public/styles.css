@@ -211,3 +211,25 @@ ol.steps { margin: .3rem 0 0; padding-inline-start: 1.2rem; font-size: .86rem; c
 .reader figcaption { font-size: .8rem; color: var(--muted); text-align: center; margin-top: -.5rem; }
 .reader ul, .reader ol { padding-inline-start: 1.3rem; }
 .hint { font-size: .82rem; color: var(--muted); text-align: center; margin: 1rem 0; }
+
+/* Shared by the club section */
+.seg.plat { margin: .2rem 0 .8rem; background: var(--card); box-shadow: var(--shadow); }
+.seg.plat button.on { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
+.src-row.link { text-decoration: none; color: inherit; justify-content: space-between; }
+.src-row.link:first-of-type { border-top: 0; }
+.src-row .more { color: var(--accent); font-weight: 600; font-size: .82rem; white-space: nowrap; }
+.club-hero { display: grid; gap: .1rem; padding: 1.1rem 1.2rem; margin: .4rem 0 .8rem; border-radius: 18px; color: #000;
+  background: repeating-linear-gradient(135deg, #ffd100 0 1.6rem, #f2c400 1.6rem 3.2rem); border: 2px solid #000; }
+.club-hero b { font-size: 1.5rem; font-weight: 700; line-height: 1.4; }
+.club-hero span { font-size: .85rem; font-weight: 500; }
+
+/* Al-Ittihad section: yellow and black, whatever the app theme is. Keep last. */
+:root[data-section="ittihad"] {
+  --bg: #0a0a0a; --card: #171717; --ink: #f6f6f6; --muted: #b0b0b0; --line: #2c2c2c;
+  --accent: #ffd100; --accent-ink: #000000; --accent-soft: #2e2700; --gold: #ffd100; --danger: #ff7b7b;
+  --shadow: 0 0 0 1px #262626;
+  color-scheme: dark;
+}
+:root[data-section="ittihad"] .widget, :root[data-section="ittihad"] .item .dot { --src: #ffd100; }
+:root[data-section="ittihad"] .tabs { border-top-color: #ffd100; }
+@media (max-width: 359px) { .top-actions { gap: .2rem; } .brand p { display: none; } }

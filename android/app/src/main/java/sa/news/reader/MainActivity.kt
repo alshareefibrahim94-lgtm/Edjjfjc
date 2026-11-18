@@ -237,6 +237,16 @@ class MainActivity : ComponentActivity() {
     }
 
     inner class Bridge {
+        /** Matches the system bars to the section being shown. */
+        @JavascriptInterface
+        fun theme(color: String) {
+            val parsed = try { android.graphics.Color.parseColor(color) } catch (_: Exception) { return }
+            main.post {
+                window.statusBarColor = parsed
+                window.navigationBarColor = parsed
+            }
+        }
+
         @JavascriptInterface
         fun share(title: String, url: String) {
             val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "$title\n$url")

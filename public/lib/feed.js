@@ -150,7 +150,7 @@ export function normalizeItems(raw, source, { now = Date.now(), maxAgeH = 96, ma
     if (source.saudiOnly && !r.aggregated && !mentionsSaudi(`${title} ${summary}`)) continue;
     out.push({
       id: itemId(r.link), s: source.id, t: title, u: r.link, d: date,
-      ...(summary && { x: summary }), ...(r.image && { i: r.image }),
+      ...(summary && { x: summary }), ...(r.image && { i: r.image }), ...(source.topic && r.origin && { sn: r.origin }),
       c: source.cat || classify(`${title} ${summary}`),
     });
   }
