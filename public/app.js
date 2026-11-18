@@ -2,13 +2,6 @@
 // GitHub Actions workflow rebuilds from the publishers' feeds every ~20 minutes.
 const CATS = { all: 'الكل', local: 'محليات', politics: 'سياسة', economy: 'اقتصاد', sports: 'رياضة', tech: 'تقنية', culture: 'ثقافة ومنوعات' };
 const SUGGESTED = ['رؤية 2030', 'ولي العهد', 'أرامكو', 'الهلال', 'النصر', 'موسم الرياض', 'نيوم', 'الطقس', 'التعليم', 'الإسكان'];
-// Social accounts shown in the «تواصل» tab. TikTok and X are shown through the
-// platforms' own embed widgets; Threads has no embeddable profile feed, so it is links only.
-const SOCIAL = {
-  tt: { label: 'تيك توك', url: (h) => `https://www.tiktok.com/@${h}`, accounts: [['alekhbariyatv', 'الإخبارية'], ['alarabiya', 'العربية'], ['aljazeera', 'الجزيرة'], ['asharqnews', 'الشرق للأخبار'], ['sabqorg', 'سبق'], ['spagov', 'واس']] },
-  x: { label: 'إكس (تويتر)', url: (h) => `https://x.com/${h}`, accounts: [['SaudiNews50', 'أخبار السعودية'], ['spagov', 'واس'], ['alekhbariyatv', 'الإخبارية'], ['sabqorg', 'سبق'], ['OKAZ_online', 'عكاظ'], ['AlArabiya_KSA', 'العربية السعودية'], ['AJArabic', 'الجزيرة'], ['aawsat_News', 'الشرق الأوسط'], ['ajlnews', 'عاجل'], ['Akhbaar24', 'أخبار 24'], ['aleqtisadiah', 'الاقتصادية']] },
-  th: { label: 'ثريدز', url: (h) => `https://www.threads.net/@${h}`, accounts: [['alekhbariyatv', 'الإخبارية'], ['alarabiya', 'العربية'], ['aljazeera', 'الجزيرة'], ['sabqorg', 'سبق'], ['asharqnews', 'الشرق للأخبار'], ['spagov', 'واس']] },
-};
 const PAGE = 40;
 const REFRESH_MS = 5 * 60 * 1000;
 
@@ -22,7 +15,7 @@ const prefs = { theme: 'auto', font: 1, perWidget: 4, images: true, order: [], o
 const saved = store.get('saved', {});
 const read = new Set(store.get('read', []));
 const lastVisit = store.get('lastVisit', 0);
-const state = { data: null, byId: {}, tab: 'home', cat: 'all', vsrc: 'all', vById: {}, plat: 'yt', acc: {}, query: '', filter: null, limit: PAGE, error: '' };
+const state = { data: null, byId: {}, tab: 'home', cat: 'all', vsrc: 'all', vById: {}, query: '', filter: null, limit: PAGE, error: '' };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (n) => n.toLocaleString('ar-SA');
@@ -157,53 +150,6 @@ function videosFiltered() {
   return (state.data?.videos || []).filter((v) => (state.vsrc === 'all' || v.s === state.vsrc) && (!q || norm(v.t).includes(q)));
 }
 
-const curAcc = () => state.acc[state.plat] || SOCIAL[state.plat].accounts[0][0];
-
-function viewSocial() {
-  const platSeg = `<div class="seg plat">${[['yt', 'يوتيوب'], ...Object.entries(SOCIAL).map(([k, v]) => [k, v.label])].map(([k, l]) => `<button data-plat="${k}" class="${state.plat === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
-  if (state.plat === 'yt') return platSeg + viewVideos();
-  const p = SOCIAL[state.plat];
-  if (state.plat === 'th') {
-    return `${platSeg}<div class="panel"><h2>حسابات ثريدز</h2><p>ثريدز لا يتيح عرض الحسابات داخل تطبيقات أخرى، لذا تُفتح في تطبيق ثريدز أو المتصفح.</p>
-      ${p.accounts.map(([h, n]) => `<a class="src-row link" href="${esc(p.url(h))}" target="_blank" rel="noopener noreferrer"><span><b>${esc(n)}</b><small dir="ltr">@${esc(h)}</small></span><span class="more">فتح ↗</span></a>`).join('')}</div>`;
-  }
-  const h = curAcc();
-  return `${platSeg}<div class="embed" id="embed" data-plat="${state.plat}" data-handle="${esc(h)}"><p class="empty">جارٍ تحميل منشورات <span dir="ltr">@${esc(h)}</span>…</p></div>
-    <a class="btn ghost wide" href="${esc(p.url(h))}" target="_blank" rel="noopener noreferrer">فتح الحساب في ${esc(p.label)} ↗</a>
-    <p class="hint">${state.plat === 'x' ? 'إكس يعرض المنشورات كاملة فقط إذا كنت مسجّل الدخول إلى حسابك في المتصفح. إن لم تظهر، استخدم زر فتح الحساب.' : 'إن لم يظهر المحتوى، استخدم زر فتح الحساب.'}</p>`;
-}
-
-function loadScript(src) {
-  return new Promise((res, rej) => {
-    document.querySelectorAll(`script[data-embed="${src}"]`).forEach((n) => n.remove());
-    const el = document.createElement('script');
-    el.src = src; el.async = true; el.dataset.embed = src; el.onload = res; el.onerror = rej;
-    document.head.append(el);
-  });
-}
-
-// Fill the #embed placeholder with the platform's official widget.
-async function mountEmbed() {
-  const box = $('#embed');
-  if (!box) return;
-  const { plat, handle } = box.dataset;
-  if (!/^[\w.]{1,30}$/.test(handle)) return;
-  const fail = () => { if (box.isConnected) box.innerHTML = '<p class="empty"><b>تعذّر تحميل المنشورات</b>استخدم زر فتح الحساب بالأسفل.</p>'; };
-  try {
-    if (plat === 'tt') {
-      box.innerHTML = `<blockquote class="tiktok-embed" cite="https://www.tiktok.com/@${handle}" data-unique-id="${handle}" data-embed-type="creator" style="max-width:780px;min-width:288px;margin:0 auto"><section><a target="_blank" rel="noopener noreferrer" href="https://www.tiktok.com/@${handle}?refer=creator_embed">@${handle}</a></section></blockquote>`;
-      await loadScript('https://www.tiktok.com/embed.js');
-    } else {
-      if (!window.twttr?.widgets) await loadScript('https://platform.twitter.com/widgets.js');
-      const dark = prefs.theme === 'dark' || (prefs.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-      if (!box.isConnected) return;
-      box.innerHTML = '';
-      const el = await window.twttr.widgets.createTimeline({ sourceType: 'profile', screenName: handle }, box, { height: 720, lang: 'ar', theme: dark ? 'dark' : 'light', dnt: true, chrome: 'noheader nofooter' });
-      if (!el) fail();
-    }
-  } catch { fail(); }
-}
-
 function viewVideos() {
   const vids = videosFiltered();
   if (!vids.length) return '<div class="empty"><b>لا توجد فيديوهات حالياً</b>تُجلب أحدث المقاطع من قنوات المصادر على يوتيوب مع كل تحديث.</div>';
@@ -280,10 +226,7 @@ function viewSettings() {
 function render() {
   const view = $('#view');
   $('#cats').hidden = state.tab === 'saved' || state.tab === 'settings';
-  if (state.tab === 'video' && state.plat === 'th') $('#cats').hidden = true;
-  $('#cats').innerHTML = state.tab === 'video' && state.plat !== 'yt'
-    ? SOCIAL[state.plat].accounts.map(([h, n]) => `<button class="chip${curAcc() === h ? ' on' : ''}" data-acc="${esc(h)}">${esc(n)}</button>`).join('')
-    : state.tab === 'video'
+  $('#cats').innerHTML = state.tab === 'video'
     ? [['all', 'كل القنوات'], ...(state.data?.videoSources || []).filter((s) => s.count).map((s) => [s.id, s.name])].map(([k, l]) => `<button class="chip${state.vsrc === k ? ' on' : ''}" data-vsrc="${esc(k)}">${esc(l)}</button>`).join('')
     : Object.entries(CATS).map(([k, l]) => `<button class="chip${state.cat === k ? ' on' : ''}" data-cat="${k}">${l}</button>`).join('');
   document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === state.tab));
@@ -294,8 +237,7 @@ function render() {
       ? '<div class="empty"><b>لم تُجهَّز الأخبار بعد</b>سيجلبها التحديث التلقائي خلال دقائق. اضغط زر التحديث لاحقاً.</div>'
       : state.error ? '<div class="empty"><b>تعذّر تحميل الأخبار</b>تحقق من اتصالك بالإنترنت ثم اضغط زر التحديث.</div>'
       : '<div class="empty">جارٍ تحميل الأخبار…</div>';
-  } else view.innerHTML = state.tab === 'latest' ? viewLatest() : state.tab === 'video' ? viewSocial() : viewHome();
-  mountEmbed();
+  } else view.innerHTML = state.tab === 'latest' ? viewLatest() : state.tab === 'video' ? viewVideos() : viewHome();
 }
 
 function renderStatus() {
@@ -380,8 +322,6 @@ document.addEventListener('click', async (e) => {
   if (d.cat) { state.cat = d.cat; state.limit = PAGE; render(); renderStatus(); return; }
   if (d.open) return openSheet(d.open);
   if (d.video) return openVideo(d.video);
-  if (d.plat) { state.plat = d.plat; state.limit = PAGE; return render(); }
-  if (d.acc) { state.acc[state.plat] = d.acc; return render(); }
   if (d.vsrc) { state.vsrc = d.vsrc; state.limit = PAGE; return render(); }
   if (d.filter) { const f = JSON.parse(d.filter); return go('latest', f.all ? null : f); }
   if ('clearFilter' in d) return go('latest');

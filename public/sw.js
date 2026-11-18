@@ -1,6 +1,6 @@
 // Offline support: app shell is served stale-while-revalidate, news data is
 // network-first with the last downloaded copy as fallback.
-const CACHE = 'saudi-news-v3';
+const CACHE = 'saudi-news-v4';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {
