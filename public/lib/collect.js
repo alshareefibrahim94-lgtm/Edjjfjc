@@ -78,13 +78,14 @@ async function loadTopic(topic, text) {
   return { items: normalizeItems(raw, { id: topic.id, cat: 'sports', topic: true }, { max: 80 }), log };
 }
 
-export async function collect({ sources, channels, topics = [], http, prev = null, log = () => {} }) {
+export async function collect({ sources, channels, topics = [], gaming = [], http, prev = null, log = () => {} }) {
   const text = async (url) => { const r = await http(url); return decodeBody(r.bytes, r.type); };
   const now = Date.now();
-  const [results, vResults, tResults] = await Promise.all([
+  const [results, vResults, tResults, gResults] = await Promise.all([
     Promise.all(sources.map((s) => loadSource(s, text))),
     Promise.all(channels.map((c) => loadVideos(c, text, now))),
     Promise.all(topics.map((t) => loadTopic(t, text))),
+    Promise.all(gaming.map((s) => loadSource(s, text))),
   ]);
 
   const items = [];
@@ -107,7 +108,7 @@ export async function collect({ sources, channels, topics = [], http, prev = nul
     if (!vids.length && prev?.videos) { vids = prev.videos.filter((v) => v.s === ch.id); if (vids.length) l.push('stale'); }
     videos.push(...vids);
     log(`${ch.id.padEnd(13)} ${String(vids.length).padStart(2)}  [${l.join(' | ')}]`);
-    return { id: ch.id, name: ch.name, color: ch.color, count: vids.length, ...(ch.club && { club: true }) };
+    return { id: ch.id, name: ch.name, color: ch.color, count: vids.length, ...(ch.club && { club: true }), ...(ch.section && { section: ch.section }) };
   });
   videos.sort((a, b) => b.d - a.d);
 
@@ -120,5 +121,20 @@ export async function collect({ sources, channels, topics = [], http, prev = nul
     log(`${t.id.padEnd(13)} ${String(got.length).padStart(2)}  [${l.join(' | ')}]`);
   });
 
-  return { generatedAt: now, sources: meta, items, videoSources, videos, topics: topicItems };
+  // Gaming section: its own publishers, kept apart from the Saudi news lists.
+  log('\nGaming');
+  const gItems = [];
+  const gMeta = gaming.map((src, k) => {
+    let { items: got, via, log: l } = gResults[k];
+    if (!got.length && prev?.gaming?.items) {
+      got = prev.gaming.items.filter((i) => i.s === src.id && now - i.d < MAX_AGE);
+      if (got.length) via = 'stale';
+    }
+    gItems.push(...got);
+    log(`${src.id.padEnd(15)} ${via.padEnd(7)} ${String(got.length).padStart(2)}  [${l.join(' | ')}]`);
+    return { id: src.id, name: src.name, color: src.color, lang: src.lang, via, count: got.length };
+  });
+  gItems.sort((a, b) => b.d - a.d);
+
+  return { generatedAt: now, sources: meta, items, videoSources, videos, topics: topicItems, gaming: { sources: gMeta, items: gItems } };
 }

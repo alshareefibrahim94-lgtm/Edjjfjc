@@ -1,0 +1,18 @@
+[
+  {"id": "g-ign", "name": "IGN", "full": "IGN", "color": "#bf1313", "lang": "en", "domain": "ign.com", "feeds": ["https://feeds.feedburner.com/ign/all", "https://www.ign.com/rss/articles/feed"]},
+  {"id": "g-gamespot", "name": "GameSpot", "full": "GameSpot", "color": "#f5a300", "lang": "en", "domain": "gamespot.com", "feeds": ["https://www.gamespot.com/feeds/news/", "https://www.gamespot.com/feeds/mashup/"]},
+  {"id": "g-eurogamer", "name": "Eurogamer", "full": "Eurogamer", "color": "#0e7ac4", "lang": "en", "domain": "eurogamer.net", "feeds": ["https://www.eurogamer.net/feed"]},
+  {"id": "g-vgc", "name": "VGC", "full": "VGC", "color": "#e6007e", "lang": "en", "domain": "videogameschronicle.com", "feeds": ["https://www.videogameschronicle.com/feed/"]},
+  {"id": "g-pcgamer", "name": "PC Gamer", "full": "PC Gamer", "color": "#d32f2f", "lang": "en", "domain": "pcgamer.com", "feeds": ["https://www.pcgamer.com/rss/"]},
+  {"id": "g-polygon", "name": "Polygon", "full": "Polygon", "color": "#ff0a5f", "lang": "en", "domain": "polygon.com", "feeds": ["https://www.polygon.com/rss/index.xml"]},
+  {"id": "g-kotaku", "name": "Kotaku", "full": "Kotaku", "color": "#f26522", "lang": "en", "domain": "kotaku.com", "feeds": ["https://kotaku.com/rss"]},
+  {"id": "g-insidergaming", "name": "Insider Gaming", "full": "Insider Gaming", "color": "#5b8def", "lang": "en", "domain": "insider-gaming.com", "feeds": ["https://insider-gaming.com/feed/"]},
+  {"id": "g-psblog", "name": "PlayStation Blog", "full": "PlayStation Blog", "color": "#0070d1", "lang": "en", "domain": "blog.playstation.com", "feeds": ["https://blog.playstation.com/feed/"]},
+  {"id": "g-xboxwire", "name": "Xbox Wire", "full": "Xbox Wire", "color": "#107c10", "lang": "en", "domain": "news.xbox.com", "feeds": ["https://news.xbox.com/en-us/feed/"]},
+  {"id": "g-nintendolife", "name": "Nintendo Life", "full": "Nintendo Life", "color": "#e60012", "lang": "en", "domain": "nintendolife.com", "feeds": ["https://www.nintendolife.com/feeds/latest"]},
+  {"id": "g-ignme", "name": "IGN الشرق الأوسط", "full": "IGN الشرق الأوسط", "color": "#bf1313", "lang": "ar", "domain": "me.ign.com", "feeds": ["https://me.ign.com/ar/feed.xml"]},
+  {"id": "g-saudigamer", "name": "سعودي جيمر", "full": "سعودي جيمر", "color": "#00a651", "lang": "ar", "domain": "saudigamer.com", "feeds": ["https://saudigamer.com/feed/"]},
+  {"id": "g-truegaming", "name": "ترو جيمنج", "full": "ترو جيمنج", "color": "#1e88e5", "lang": "ar", "domain": "true-gaming.net", "feeds": ["https://www.true-gaming.net/home/feed/"]},
+  {"id": "g-vga4a", "name": "VGA4A", "full": "VGA4A", "color": "#7e57c2", "lang": "ar", "domain": "vga4a.com", "feeds": ["https://www.vga4a.com/feed/"]},
+  {"id": "g-arabhardware", "name": "عرب هاردوير", "full": "عرب هاردوير", "color": "#ef6c00", "lang": "ar", "domain": "arabhardware.net", "feeds": ["https://arabhardware.net/feed"]}
+]

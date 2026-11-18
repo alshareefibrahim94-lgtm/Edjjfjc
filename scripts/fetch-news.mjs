@@ -32,7 +32,7 @@ async function loadPrevious() {
 }
 
 const json = async (f) => JSON.parse(await readFile(join(pub, f), 'utf8'));
-const data = await collect({ sources: await json('sources.json'), channels: await json('videos.json'), topics: await json('topics.json'), http, prev: await loadPrevious(), log: console.log });
+const data = await collect({ sources: await json('sources.json'), channels: await json('videos.json'), topics: await json('topics.json'), gaming: await json('gaming.json'), http, prev: await loadPrevious(), log: console.log });
 if (!data.items.length) { console.error('No items fetched from any source.'); process.exit(1); }
 
 await mkdir(dirname(OUT), { recursive: true });

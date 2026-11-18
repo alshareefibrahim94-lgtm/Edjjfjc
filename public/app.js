@@ -28,11 +28,12 @@ const store = {
   set(k, v) { try { localStorage.setItem('sn:' + k, JSON.stringify(v)); } catch { /* private mode / quota */ } },
 };
 
-const prefs = { theme: 'auto', font: 1, perWidget: 4, images: true, order: [], off: [], known: [], keywords: [], ...store.get('prefs', {}) };
+const SECTIONS = { ittihad: { label: 'الاتحاد', bar: '#000000' }, gaming: { label: 'الألعاب', bar: '#0d0b1a' } };
+const prefs = { section: 'ittihad', theme: 'auto', font: 1, perWidget: 4, images: true, order: [], off: [], known: [], keywords: [], ...store.get('prefs', {}) };
 const saved = store.get('saved', {});
 const read = new Set(store.get('read', []));
 const lastVisit = store.get('lastVisit', 0);
-const state = { data: null, byId: {}, tab: 'home', cat: 'all', vsrc: 'all', vById: {}, club: 'news', clubItems: [], clubVideos: [], query: '', filter: null, limit: PAGE, error: '' };
+const state = { data: null, byId: {}, tab: 'home', cat: 'all', vsrc: 'all', vById: {}, club: 'news', clubItems: [], clubVideos: [], game: 'all', gameItems: [], gameVideos: [], query: '', filter: null, limit: PAGE, error: '' };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (n) => n.toLocaleString('ar-SA');
@@ -71,8 +72,8 @@ async function loadNative(manual) {
   if (!state.data) render();
   renderStatus();
   try {
-    const [{ collect }, sources, channels, topics] = await Promise.all([import('./lib/collect.js'), ...['sources.json', 'videos.json', 'topics.json'].map((f) => fetch(f).then((r) => r.json()))]);
-    const data = await collect({ sources, channels, topics, http: nativeHttp, prev: cached });
+    const [{ collect }, sources, channels, topics, gaming] = await Promise.all([import('./lib/collect.js'), ...['sources.json', 'videos.json', 'topics.json', 'gaming.json'].map((f) => fetch(f).then((r) => r.json()))]);
+    const data = await collect({ sources, channels, topics, gaming, http: nativeHttp, prev: cached });
     if (!data.items.length) throw new Error('offline');
     store.set('data', data);
     setData(data); render();
@@ -103,7 +104,7 @@ async function load(manual) {
 
 function setData(data) {
   state.data = data;
-  state.byId = Object.fromEntries(data.sources.map((s) => [s.id, s]));
+  state.byId = Object.fromEntries([...data.sources, ...(data.gaming?.sources || [])].map((s) => [s.id, s]));
   state.vById = Object.fromEntries((data.videoSources || []).map((s) => [s.id, s]));
   data.videos = (data.videos || []).filter((v) => /^[\w-]{11}$/.test(v.id) && state.vById[v.s]);
   // First time we see a source: append it to the widget order; English ones start switched off.
@@ -121,6 +122,11 @@ function setData(data) {
   const seen = new Set();
   state.clubItems = [...data.items.filter(isClub), ...topic.filter((it) => !CLUB_NOT.test(it.n) && CLUB_LOOSE.test(it.n))]
     .filter((it) => !seen.has(it.n) && seen.add(it.n)).sort((a, b) => b.d - a.d);
+  state.gameItems = data.gaming?.items || [];
+  for (const it of state.gameItems) it.n = norm(`${it.t} ${it.x || ''}`);
+  state.gameVideos = data.videos.filter((v) => state.vById[v.s].section === 'gaming');
+  data.videos = data.videos.filter((v) => !state.vById[v.s].section); // section channels stay out of the general video tab
+  data.videoSources = data.videoSources.filter((s) => !s.section);
   state.clubVideos = data.videos.filter((v) => state.vById[v.s].club || (!CLUB_NOT.test(norm(v.t)) && CLUB_LOOSE.test(norm(v.t))));
 }
 
@@ -209,6 +215,23 @@ function viewVideos() {
     ${vids.length > state.limit ? `<button class="btn ghost wide" data-more>عرض المزيد (${num(vids.length - state.limit)})</button>` : ''}`;
 }
 
+function viewGaming() {
+  const q = norm(state.query);
+  const seg = `<div class="club-hero game"><b>الألعاب · Gaming</b><span>آخر أخبار الألعاب من أكبر المواقع وصنّاع المحتوى</span></div>
+    <div class="seg plat">${[['all', 'الكل'], ['ar', 'عربي'], ['en', 'English'], ['video', 'فيديو']].map(([k, l]) => `<button data-game="${k}" class="${state.game === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  if (state.game === 'video') {
+    const vids = state.gameVideos.filter((v) => !q || norm(v.t).includes(q));
+    return seg + (vids.length ? `<div class="vgrid">${vids.slice(0, state.limit).map(videoCard).join('')}</div>${vids.length > state.limit ? `<button class="btn ghost wide" data-more>عرض المزيد (${num(vids.length - state.limit)})</button>` : ''}` : '<div class="empty"><b>لا توجد مقاطع حالياً</b></div>');
+  }
+  const items = state.gameItems.filter((it) => (!q || it.n.includes(q)) && (state.game === 'all' || state.byId[it.s]?.lang === state.game));
+  return seg + listView(items, 'لا توجد أخبار ألعاب حالياً');
+}
+
+function viewSection() {
+  const pick = `<nav class="chips sec-pick">${Object.entries(SECTIONS).map(([k, v]) => `<button class="chip${prefs.section === k ? ' on' : ''}" data-sec="${k}">${v.label}</button>`).join('')}</nav>`;
+  return pick + (prefs.section === 'gaming' ? viewGaming() : viewClub());
+}
+
 function viewClub() {
   const q = norm(state.query);
   const items = state.clubItems.filter((it) => (!q || it.n.includes(q)) && (state.club !== 'rumors' || RUMOR.test(it.n)));
@@ -293,12 +316,12 @@ function viewSettings() {
 
 function render() {
   const view = $('#view');
-  $('#cats').hidden = state.tab === 'saved' || state.tab === 'settings' || state.tab === 'club';
-  // The club section carries its own yellow-and-black look.
-  const club = state.tab === 'club';
-  if (club !== (document.documentElement.dataset.section === 'ittihad')) {
-    if (club) document.documentElement.dataset.section = 'ittihad'; else delete document.documentElement.dataset.section;
-    const bar = club ? '#000000' : '#0a7a45';
+  $('#cats').hidden = state.tab === 'saved' || state.tab === 'settings' || state.tab === 'sec';
+  // Each personal section carries its own colours.
+  const sec = state.tab === 'sec' ? prefs.section : '';
+  if (sec !== (document.documentElement.dataset.section || '')) {
+    if (sec) document.documentElement.dataset.section = sec; else delete document.documentElement.dataset.section;
+    const bar = sec ? SECTIONS[sec].bar : '#0a7a45';
     document.querySelector('meta[name="theme-color"]').content = bar;
     window.Native?.theme?.(bar);
   }
@@ -313,12 +336,12 @@ function render() {
       : state.error === 'nodata' ? '<div class="empty"><b>لم تُجهَّز الأخبار بعد</b>سيجلبها التحديث التلقائي خلال دقائق. اضغط زر التحديث لاحقاً.</div>'
       : state.error ? '<div class="empty"><b>تعذّر تحميل الأخبار</b>تحقق من اتصالك بالإنترنت ثم اضغط زر التحديث.</div>'
       : '<div class="empty">جارٍ تحميل الأخبار…</div>';
-  } else view.innerHTML = state.tab === 'latest' ? viewLatest() : state.tab === 'video' ? viewVideos() : state.tab === 'club' ? viewClub() : viewHome();
+  } else view.innerHTML = state.tab === 'latest' ? viewLatest() : state.tab === 'video' ? viewVideos() : state.tab === 'sec' ? viewSection() : viewHome();
 }
 
 function renderStatus() {
   const el = $('#status');
-  el.hidden = ['saved', 'settings', 'video', 'club'].includes(state.tab);
+  el.hidden = ['saved', 'settings', 'video', 'sec'].includes(state.tab);
   el.classList.toggle('err', !!state.error && !!state.data);
   if (!state.data) { el.textContent = ''; return; }
   const live = state.data.sources.filter((s) => s.count && enabled(s.id)).length;
@@ -405,7 +428,7 @@ async function showArticle(it) {
 /* ---------- article sheet ---------- */
 let sheetItem = null;
 function openSheet(id) {
-  const it = state.data?.items.find((i) => i.id === id) || state.clubItems.find((i) => i.id === id) || saved[id];
+  const it = state.data?.items.find((i) => i.id === id) || state.clubItems.find((i) => i.id === id) || state.gameItems.find((i) => i.id === id) || saved[id];
   if (!it) return;
   sheetItem = it;
   read.add(id); store.set('read', [...read].slice(-600));
@@ -433,7 +456,7 @@ function openSheet(id) {
   document.querySelectorAll(`[data-open="${CSS.escape(id)}"]`).forEach((b) => b.classList.add('read'));
 }
 function openVideo(id) {
-  const v = state.data?.videos.find((x) => x.id === id);
+  const v = [...(state.data?.videos || []), ...state.gameVideos].find((x) => x.id === id);
   if (!v) return;
   const ch = state.vById[v.s];
   const url = `https://www.youtube.com/watch?v=${v.id}`;
@@ -479,6 +502,8 @@ document.addEventListener('click', async (e) => {
   if (d.cat) { state.cat = d.cat; state.limit = PAGE; render(); renderStatus(); return; }
   if (d.open) return openSheet(d.open);
   if (d.video) return openVideo(d.video);
+  if (d.sec) { prefs.section = d.sec; savePrefs(); state.limit = PAGE; render(); return scrollTo(0, 0); }
+  if (d.game) { state.game = d.game; state.limit = PAGE; return render(); }
   if (d.club) { state.club = d.club; state.limit = PAGE; return render(); }
   if (d.vsrc) { state.vsrc = d.vsrc; state.limit = PAGE; return render(); }
   if (d.filter) { const f = JSON.parse(d.filter); return go('latest', f.all ? null : f); }

@@ -233,3 +233,15 @@ ol.steps { margin: .3rem 0 0; padding-inline-start: 1.2rem; font-size: .86rem; c
 :root[data-section="ittihad"] .widget, :root[data-section="ittihad"] .item .dot { --src: #ffd100; }
 :root[data-section="ittihad"] .tabs { border-top-color: #ffd100; }
 @media (max-width: 359px) { .top-actions { gap: .2rem; } .brand p { display: none; } }
+.chips.sec-pick { padding: .3rem 0 .5rem; }
+.item[dir="ltr"], .vcard { unicode-bidi: plaintext; }
+
+/* Gaming section: deep violet with neon accents. */
+:root[data-section="gaming"] {
+  --bg: #0d0b1a; --card: #18152c; --ink: #f2f0ff; --muted: #a9a3c9; --line: #2a2547;
+  --accent: #a67bff; --accent-ink: #0d0b1a; --accent-soft: #261f4a; --gold: #22e3c4; --danger: #ff7b9c;
+  --shadow: 0 0 0 1px #2a2547;
+  color-scheme: dark;
+}
+:root[data-section="gaming"] .tabs { border-top-color: #a67bff; }
+.club-hero.game { color: #fff; border-color: #a67bff; background: linear-gradient(120deg, #5b2bd6, #a67bff 55%, #22e3c4); }
