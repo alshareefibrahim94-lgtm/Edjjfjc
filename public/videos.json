@@ -1,7 +1,7 @@
 [
   {"id": "ittihadclub", "name": "نادي الاتحاد", "color": "#ffd100", "club": true, "handles": ["ittihadclub", "ittihad", "alittihadclub", "ittihadfc"], "channelId": "UCivJETAP4VD7rXRgjdpVwNw"},
-  {"id": "thmanyahsports", "name": "ثمانية الرياضية", "color": "#111111", "handles": ["thmanyahsports", "ThmanyahSports", "thmanyah_sports", "thmanyahsport"]},
-  {"id": "thmanyah", "name": "ثمانية", "color": "#333333", "handles": ["thmanyah", "Thmanyah"]},
+  {"id": "thmanyahsports", "name": "رياضة ثمانية", "color": "#111111", "handles": ["thmanyahsports", "ThmanyahSports", "thmanyah_sports", "thmanyahsport"], "channelId": "UCj-2hfXdYPPNcLqcBeW3y8g"},
+  {"id": "thmanyah", "name": "ثمانية", "color": "#333333", "handles": ["thmanyah", "Thmanyah"], "channelId": "UCQPalfEYxVLs8nEB4LutApQ"},
   {"id": "alarabiya", "name": "العربية", "color": "#ef6c00", "handles": ["AlArabiya", "alarabiya"], "channelId": "UCahpxixMCwoANAftn6IxkTg"},
   {"id": "aljazeera", "name": "الجزيرة", "color": "#c8a03c", "handles": ["aljazeera", "AlJazeeraChannel", "aljazeeraarabic"], "channelId": "UCfiwzLy-8yKzIbsmZTzxDgw"},
   {"id": "sabq", "name": "سبق", "color": "#c62828", "handles": ["sabqorg", "sabq"], "channelId": "UChhXy06ZLLwTsSa4OUwLYHg"},
