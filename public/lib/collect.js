@@ -53,7 +53,10 @@ async function loadVideos(ch, text, now) {
   }
   for (const id of ids) {
     try {
-      const vids = parseYouTube(await text(`https://www.youtube.com/feeds/videos.xml?channel_id=${id}`))
+      const xml = await text(`https://www.youtube.com/feeds/videos.xml?channel_id=${id}`);
+      // The channel's own name goes in the log so a wrongly matched channel is easy to spot.
+      log.push(`"${(xml.match(/<title>([^<]*)<\/title>/) || [])[1] || '?'}"`);
+      const vids = parseYouTube(xml)
         .map((v) => ({ id: v.id, s: ch.id, t: v.title, d: Math.min(v.date ?? now, now) }))
         .filter((v) => now - v.d < 14 * 86400e3).sort((a, b) => b.d - a.d).slice(0, 8);
       log.push(`feed:${vids.length}`);

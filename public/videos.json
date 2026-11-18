@@ -10,7 +10,6 @@
   {"id": "ssc", "name": "SSC الرياضية", "color": "#558b2f", "handles": ["ssc_sports", "SSCSports"], "channelId": "UCXichv4XKps2gKNGh7yVPIw"},
   {"id": "saudiatv", "name": "القناة السعودية", "color": "#00695c", "handles": ["saudiatv", "SaudiTV"], "channelId": "UCWHvikBeCwBnEopmwkekwZg"},
   {"id": "rotana", "name": "روتانا خليجية", "color": "#4527a0", "handles": ["Khalejiatv", "RotanaKhalijia"], "channelId": "UCsVQJ4sjopcYEQHxWnS2Spg"},
-  {"id": "spl", "name": "دوري روشن", "color": "#1b5e20", "handles": ["SPL", "spl", "SaudiProLeague"], "channelId": "UCq33AlEZl8QBmxatFEwknew"},
   {"id": "g-ign", "name": "IGN", "color": "#9d6bff", "section": "gaming", "handles": ["IGN"], "channelId": "UCKy1dAqELo0zrOtPkf0eTMw"},
   {"id": "g-gamespot", "name": "GameSpot", "color": "#9d6bff", "section": "gaming", "handles": ["gamespot"], "channelId": "UCbu2SsF-Or3Rsn3NxqODImw"},
   {"id": "g-playstation", "name": "PlayStation", "color": "#9d6bff", "section": "gaming", "handles": ["PlayStation"], "channelId": "UC-2Y8dQb0S6DtpxNgAKoJKA"},
