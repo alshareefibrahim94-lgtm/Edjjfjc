@@ -399,21 +399,35 @@ function cleanArticle(html, base, skipImage) {
   return frag;
 }
 
-async function loadArticle(it) {
-  if (articles.has(it.id)) return articles.get(it.id);
-  let url = it.u;
-  if (new URL(url).hostname.endsWith('news.google.com')) {
-    const r = await fetch(`/resolve?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(20000) });
-    if (!r.ok) throw new Error('resolve');
-    url = (await r.json()).url;
-  }
-  const res = await nativeHttp(url);
-  const doc = new DOMParser().parseFromString(decodeBody(res.bytes, res.type), 'text/html');
-  const image = absUrl(doc.querySelector('meta[property="og:image"], meta[name="twitter:image"]')?.content || '', res.url);
+// Pull the readable article out of a page's HTML; null when there is no real text in it.
+async function extractArticle(html, url) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const image = absUrl(doc.querySelector('meta[property="og:image"], meta[name="twitter:image"]')?.content || '', url);
   if (!window.Readability) await new Promise((ok, no) => { const el = document.createElement('script'); el.src = 'lib/readability.js'; el.onload = ok; el.onerror = no; document.head.append(el); });
   const parsed = new window.Readability(doc).parse();
-  if (!parsed || parsed.textContent.trim().length < 200) throw new Error('short');
-  const art = { url: res.url, image, html: parsed.content };
+  if (!parsed || parsed.textContent.trim().length < 120) return null;
+  return { url, image, html: parsed.content };
+}
+
+// Two ways to get a story's page: a plain download (fast), and — when that is
+// blocked, empty, or the link is an aggregator redirect — /render, which opens
+// the page in a real hidden browser view on the phone and hands back the result.
+async function loadArticle(it) {
+  if (articles.has(it.id)) return articles.get(it.id);
+  let art = null;
+  if (!/(^|\.)(google|bing)\.com$/.test(new URL(it.u).hostname)) {
+    try {
+      const res = await nativeHttp(it.u);
+      art = await extractArticle(decodeBody(res.bytes, res.type), res.url);
+    } catch { /* fall through to the rendered page */ }
+  }
+  if (!art) {
+    const r = await fetch(`/render?url=${encodeURIComponent(it.u)}`, { signal: AbortSignal.timeout(40000) });
+    if (!r.ok) throw new Error('render');
+    const page = await r.json();
+    art = await extractArticle(page.html, page.url);
+    if (!art) throw new Error('short');
+  }
   articles.set(it.id, art);
   return art;
 }
@@ -452,7 +466,7 @@ function openSheet(id) {
     <div class="meta"><span class="src" style="--src:${esc(src.color)}"><i class="dot"></i>${esc(src.name)}</span><span>${ago(it.d)}</span><span>${esc(CATS[it.c] || '')}</span></div>
     <h2 id="sheet-title">${esc(it.t)}</h2>
     ${it.x ? `<p class="summary">${esc(it.x)}</p>` : ''}
-    ${NATIVE ? '<div class="reader" id="reader"><p class="hint">جارٍ تحميل نص الخبر…</p></div>' : ''}
+    ${NATIVE ? '<div class="reader" id="reader"><p class="hint">جارٍ تحميل نص الخبر والصورة… قد يستغرق بضع ثوانٍ</p></div>' : ''}
     <div class="actions" dir="rtl">
       <a class="btn${NATIVE ? ' ghost' : ''}" href="${esc(httpUrl(it.u))}" target="_blank" rel="noopener noreferrer">${NATIVE ? 'فتح الصفحة الأصلية ↗' : 'قراءة الخبر كاملاً من المصدر ↗'}</a>
       <button class="btn ghost" data-save>${saved[id] ? '🔖 محفوظ' : 'حفظ'}</button>

@@ -30,7 +30,7 @@ import org.json.JSONObject
  * Hosts the bundled web app in a WebView and gives it two local endpoints that a
  * normal web page cannot have:
  *   /proxy?url=…    fetches any http(s) URL from the phone (feeds, article pages)
- *   /resolve?url=…  follows a news-aggregator redirect link to the real article URL
+ *   /render?url=…   opens a page in a hidden browser view and returns its rendered HTML
  * Nothing is sent to any server other than the news sources themselves.
  */
 class MainActivity : ComponentActivity() {
@@ -69,7 +69,7 @@ class MainActivity : ComponentActivity() {
                 if (uri.host != HOST) return null
                 return when (uri.path) {
                     "/proxy" -> proxy(uri.getQueryParameter("url"))
-                    "/resolve" -> resolve(uri.getQueryParameter("url"))
+                    "/render" -> render(uri.getQueryParameter("url"))
                     else -> assets.shouldInterceptRequest(uri)
                 }
             }
@@ -195,45 +195,91 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * News-aggregator links only reveal the real article address after running
-     * their page script, so load the link in a throwaway WebView and report the
-     * first address it navigates to outside the aggregator.
+     * Opens a page in a real, hidden browser view and returns its final address
+     * and rendered HTML as JSON. Unlike a plain download this follows
+     * news-aggregator redirect links, runs the page's scripts, and is treated by
+     * publishers as an ordinary visitor. Images are not downloaded.
      */
     @SuppressLint("SetJavaScriptEnabled")
-    private fun resolve(raw: String?): WebResourceResponse {
+    private fun render(raw: String?): WebResourceResponse {
         val start = httpUrl(raw) ?: return respond(400, "Bad Request", ByteArray(0))
         val done = CountDownLatch(1)
-        var found: String? = null
+        var html: String? = null
+        var finalUrl: String? = null
         var probe: WebView? = null
+        var closed = false
+
+        fun isPublisher(candidate: String?): Boolean {
+            val host = try { Uri.parse(candidate).host ?: "" } catch (_: Exception) { "" }
+            return host.isNotEmpty() && !host.endsWith("google.com") && !host.endsWith("bing.com")
+        }
 
         main.post {
             val view = WebView(this)
             probe = view
-            view.settings.javaScriptEnabled = true
-            view.settings.blockNetworkImage = true
+            view.settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                blockNetworkImage = true
+                mediaPlaybackRequiresUserGesture = true
+                userAgentString = userAgent
+            }
+            // Sits behind the visible page so sites see a normal, laid-out view.
+            root.addView(view, 0, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+
+            var grabbing = false
+            fun grab(delay: Long) {
+                if (grabbing || closed) return
+                grabbing = true
+                main.postDelayed({
+                    if (closed) return@postDelayed
+                    view.evaluateJavascript("document.documentElement.outerHTML") { value ->
+                        html = value
+                        finalUrl = view.url
+                        done.countDown()
+                    }
+                }, delay)
+            }
+
             view.webViewClient = object : WebViewClient() {
-                fun check(candidate: String?): Boolean {
-                    val host = try { Uri.parse(candidate).host ?: "" } catch (_: Exception) { "" }
-                    if (host.isEmpty() || host.endsWith("google.com") || host.endsWith("bing.com")) return false
-                    found = candidate
-                    done.countDown()
+                override fun onPageFinished(v: WebView, url: String?) {
+                    if (isPublisher(url)) grab(1200)
+                }
+
+                // Stay on web pages: ignore app links, store links and the like.
+                override fun shouldOverrideUrlLoading(v: WebView, request: WebResourceRequest): Boolean {
+                    val scheme = request.url.scheme
+                    return scheme != "http" && scheme != "https"
+                }
+            }
+            view.webChromeClient = object : WebChromeClient() {
+                override fun onJsAlert(v: WebView, url: String?, message: String?, result: android.webkit.JsResult): Boolean {
+                    result.cancel()
                     return true
                 }
 
-                override fun shouldOverrideUrlLoading(v: WebView, request: WebResourceRequest) =
-                    request.isForMainFrame && check(request.url.toString())
-
-                override fun onPageStarted(v: WebView, url: String?, favicon: android.graphics.Bitmap?) {
-                    if (check(url)) v.stopLoading()
+                override fun onJsConfirm(v: WebView, url: String?, message: String?, result: android.webkit.JsResult): Boolean {
+                    result.cancel()
+                    return true
                 }
             }
             view.loadUrl(start.toString())
+            // Slow pages: take what has loaded so far rather than give up.
+            main.postDelayed({ if (!closed && isPublisher(view.url)) grab(0) }, 14000)
         }
 
-        done.await(15, TimeUnit.SECONDS)
-        main.post { probe?.destroy() }
-        val url = found ?: return respond(504, "Gateway Timeout", ByteArray(0))
-        return respond(200, "OK", JSONObject().put("url", url).toString().toByteArray())
+        done.await(24, TimeUnit.SECONDS)
+        main.post {
+            closed = true
+            probe?.let {
+                root.removeView(it)
+                it.destroy()
+            }
+        }
+        val page = html?.takeIf { it.length > 2 && it != "null" } ?: return respond(504, "Gateway Timeout", ByteArray(0))
+        // evaluateJavascript already returns the HTML as a JSON string literal.
+        val json = "{\"url\":" + JSONObject.quote(finalUrl ?: start.toString()) + ",\"html\":" + page + "}"
+        return respond(200, "OK", json.toByteArray())
     }
 
     inner class Bridge {
