@@ -15,7 +15,7 @@ const prefs = { theme: 'auto', font: 1, perWidget: 4, images: true, order: [], o
 const saved = store.get('saved', {});
 const read = new Set(store.get('read', []));
 const lastVisit = store.get('lastVisit', 0);
-const state = { data: null, byId: {}, tab: 'home', cat: 'all', query: '', filter: null, limit: PAGE, error: '' };
+const state = { data: null, byId: {}, tab: 'home', cat: 'all', vsrc: 'all', vById: {}, query: '', filter: null, limit: PAGE, error: '' };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (n) => n.toLocaleString('ar-SA');
@@ -60,6 +60,8 @@ async function load(manual) {
 function setData(data) {
   state.data = data;
   state.byId = Object.fromEntries(data.sources.map((s) => [s.id, s]));
+  state.vById = Object.fromEntries((data.videoSources || []).map((s) => [s.id, s]));
+  data.videos = (data.videos || []).filter((v) => /^[\w-]{11}$/.test(v.id) && state.vById[v.s]);
   // First time we see a source: append it to the widget order; English ones start switched off.
   for (const s of data.sources) {
     if (prefs.known.includes(s.id)) continue;
@@ -134,11 +136,34 @@ function listView(items, emptyMsg) {
     ${items.length > state.limit ? `<button class="btn ghost wide" data-more>عرض المزيد (${num(items.length - state.limit)})</button>` : ''}`;
 }
 
+function videoCard(v) {
+  const ch = state.vById[v.s];
+  return `<button class="vcard" data-video="${esc(v.id)}">
+    <span class="vthumb"><img src="https://i.ytimg.com/vi/${esc(v.id)}/hqdefault.jpg" alt="" loading="lazy" referrerpolicy="no-referrer"><i class="play"></i></span>
+    <span class="item-title">${esc(v.t)}</span>
+    <span class="meta"><span class="src" style="--src:${esc(ch.color)}"><i class="dot"></i>${esc(ch.name)}</span><span>${ago(v.d)}</span></span>
+  </button>`;
+}
+
+function videosFiltered() {
+  const q = norm(state.query);
+  return (state.data?.videos || []).filter((v) => (state.vsrc === 'all' || v.s === state.vsrc) && (!q || norm(v.t).includes(q)));
+}
+
+function viewVideos() {
+  const vids = videosFiltered();
+  if (!vids.length) return '<div class="empty"><b>لا توجد فيديوهات حالياً</b>تُجلب أحدث المقاطع من قنوات المصادر على يوتيوب مع كل تحديث.</div>';
+  return `<div class="section-title">أحدث الفيديوهات (${num(vids.length)})</div><div class="vgrid">${vids.slice(0, state.limit).map(videoCard).join('')}</div>
+    ${vids.length > state.limit ? `<button class="btn ghost wide" data-more>عرض المزيد (${num(vids.length - state.limit)})</button>` : ''}`;
+}
+
 /* ---------- views ---------- */
 function viewHome() {
   const items = visible();
   if (state.query) return `<div class="section-title">نتائج البحث (${num(items.length)})</div>${listView(items, 'لا توجد نتائج مطابقة')}`;
   let html = hero(items);
+  const vids = state.cat === 'all' ? (state.data.videos || []).slice(0, 8) : [];
+  if (vids.length) html += `<div class="section-title">أحدث الفيديوهات<button class="more" data-tab="video">عرض الكل ‹</button></div><div class="vstrip">${vids.map(videoCard).join('')}</div>`;
   const widgets = [];
   if (prefs.keywords.length) {
     const mine = items.filter(matchesInterest);
@@ -201,7 +226,9 @@ function viewSettings() {
 function render() {
   const view = $('#view');
   $('#cats').hidden = state.tab === 'saved' || state.tab === 'settings';
-  $('#cats').innerHTML = Object.entries(CATS).map(([k, l]) => `<button class="chip${state.cat === k ? ' on' : ''}" data-cat="${k}">${l}</button>`).join('');
+  $('#cats').innerHTML = state.tab === 'video'
+    ? [['all', 'كل القنوات'], ...(state.data?.videoSources || []).filter((s) => s.count).map((s) => [s.id, s.name])].map(([k, l]) => `<button class="chip${state.vsrc === k ? ' on' : ''}" data-vsrc="${esc(k)}">${esc(l)}</button>`).join('')
+    : Object.entries(CATS).map(([k, l]) => `<button class="chip${state.cat === k ? ' on' : ''}" data-cat="${k}">${l}</button>`).join('');
   document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === state.tab));
   if (state.tab === 'settings') view.innerHTML = viewSettings();
   else if (state.tab === 'saved') view.innerHTML = viewSaved();
@@ -210,12 +237,12 @@ function render() {
       ? '<div class="empty"><b>لم تُجهَّز الأخبار بعد</b>سيجلبها التحديث التلقائي خلال دقائق. اضغط زر التحديث لاحقاً.</div>'
       : state.error ? '<div class="empty"><b>تعذّر تحميل الأخبار</b>تحقق من اتصالك بالإنترنت ثم اضغط زر التحديث.</div>'
       : '<div class="empty">جارٍ تحميل الأخبار…</div>';
-  } else view.innerHTML = state.tab === 'latest' ? viewLatest() : viewHome();
+  } else view.innerHTML = state.tab === 'latest' ? viewLatest() : state.tab === 'video' ? viewVideos() : viewHome();
 }
 
 function renderStatus() {
   const el = $('#status');
-  el.hidden = state.tab === 'saved' || state.tab === 'settings';
+  el.hidden = state.tab === 'saved' || state.tab === 'settings' || state.tab === 'video';
   el.classList.toggle('err', !!state.error && !!state.data);
   if (!state.data) { el.textContent = ''; return; }
   const live = state.data.sources.filter((s) => s.count && enabled(s.id)).length;
@@ -249,8 +276,29 @@ function openSheet(id) {
   sheet.querySelector('a').focus({ preventScroll: true });
   document.querySelectorAll(`[data-open="${CSS.escape(id)}"]`).forEach((b) => b.classList.add('read'));
 }
+function openVideo(id) {
+  const v = state.data?.videos.find((x) => x.id === id);
+  if (!v) return;
+  const ch = state.vById[v.s];
+  const url = `https://www.youtube.com/watch?v=${v.id}`;
+  sheetItem = { t: v.t, u: url };
+  const sheet = $('#sheet');
+  sheet.dir = 'rtl';
+  sheet.innerHTML = `<div class="grab"></div>
+    <div class="player"><iframe src="https://www.youtube-nocookie.com/embed/${esc(v.id)}?autoplay=1&playsinline=1&rel=0&hl=ar" title="${esc(v.t)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+    <div class="meta"><span class="src" style="--src:${esc(ch.color)}"><i class="dot"></i>${esc(ch.name)}</span><span>${ago(v.d)}</span></div>
+    <h2 id="sheet-title">${esc(v.t)}</h2>
+    <div class="actions">
+      <a class="btn" href="${esc(url)}" target="_blank" rel="noopener noreferrer">فتح في يوتيوب ↗</a>
+      <button class="btn ghost" data-share>مشاركة</button>
+      <button class="btn ghost" data-close>إغلاق</button>
+    </div>`;
+  sheet.hidden = false; $('#backdrop').hidden = false;
+  document.body.style.overflow = 'hidden';
+}
 function closeSheet() {
   if ($('#sheet').hidden) return;
+  $('#sheet').innerHTML = ''; // also stops any playing video
   $('#sheet').hidden = true; $('#backdrop').hidden = true; document.body.style.overflow = '';
   sheetItem = null;
   if (state.tab === 'saved') render();
@@ -273,6 +321,8 @@ document.addEventListener('click', async (e) => {
   if (d.tab) return go(d.tab);
   if (d.cat) { state.cat = d.cat; state.limit = PAGE; render(); renderStatus(); return; }
   if (d.open) return openSheet(d.open);
+  if (d.video) return openVideo(d.video);
+  if (d.vsrc) { state.vsrc = d.vsrc; state.limit = PAGE; return render(); }
   if (d.filter) { const f = JSON.parse(d.filter); return go('latest', f.all ? null : f); }
   if ('clearFilter' in d) return go('latest');
   if ('more' in d) { state.limit += PAGE; return render(); }

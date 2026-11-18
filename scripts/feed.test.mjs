@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseFeed, normalizeItems, classify, normalizeAr, decodeBody, stripHtml } from './feed.mjs';
+import { parseFeed, normalizeItems, classify, normalizeAr, decodeBody, stripHtml, parseYouTube, findChannelId } from './feed.mjs';
 
 const now = Date.parse('2026-11-18T12:00:00Z');
 const rss = `<?xml version="1.0" encoding="UTF-8"?><rss xmlns:media="http://search.yahoo.com/mrss/"><channel><title>x</title>
@@ -55,4 +55,12 @@ test('helpers', () => {
   assert.equal(stripHtml('<script>x</script>a &amp;amp; b'), 'a & b');
   const win1256 = Uint8Array.from([...Buffer.from('<?xml version="1.0" encoding="windows-1256"?><t>'), 0xd3, 0xe1]);
   assert.ok(decodeBody(win1256).endsWith('سل'));
+});
+
+test('parses YouTube channel feeds and channel ids', () => {
+  const xml = `<feed xmlns:yt="x"><entry><yt:videoId>dQw4w9WgXcQ</yt:videoId><title>تقرير &amp; فيديو</title><published>2026-11-18T08:00:00+00:00</published></entry><entry><yt:videoId>bad</yt:videoId><title>x</title></entry></feed>`;
+  assert.deepEqual(parseYouTube(xml), [{ id: 'dQw4w9WgXcQ', title: 'تقرير & فيديو', date: Date.parse('2026-11-18T08:00:00Z') }]);
+  assert.equal(findChannelId('..."externalId":"UCabcdefghijklmnopqrstuv"...'), 'UCabcdefghijklmnopqrstuv');
+  assert.equal(findChannelId('<link href="https://www.youtube.com/channel/UC0123456789_-ABCDEFGHIJ">'), 'UC0123456789_-ABCDEFGHIJ');
+  assert.equal(findChannelId('nothing'), '');
 });

@@ -147,3 +147,17 @@ export function normalizeItems(raw, source, { now = Date.now(), maxAgeH = 96, ma
   }
   return out.sort((a, b) => b.d - a.d).slice(0, max);
 }
+
+/** Parse a YouTube channel Atom feed into [{ id, title, date }]. */
+export function parseYouTube(xml) {
+  return blocks(xml, 'entry').map((b) => {
+    const t = Date.parse(inner(b, 'published') || inner(b, 'updated'));
+    return { id: inner(b, 'yt:videoId'), title: stripHtml(inner(b, 'title')), date: Number.isFinite(t) ? t : null };
+  }).filter((v) => /^[\w-]{11}$/.test(v.id) && v.title);
+}
+
+/** Pull the channel id (UC…) out of a YouTube channel page. */
+export function findChannelId(html) {
+  const m = html.match(/"(?:externalId|channelId|browseId)":"(UC[\w-]{22})"/) || html.match(/channel(?:_id=|\/)(UC[\w-]{22})/);
+  return m ? m[1] : '';
+}

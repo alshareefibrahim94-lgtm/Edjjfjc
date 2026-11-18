@@ -78,7 +78,7 @@ main { padding: 0 1rem; max-width: 1200px; margin: 0 auto; outline: 0; }
 
 /* Widgets */
 .grid { display: grid; gap: .85rem; grid-template-columns: 1fr; align-items: start; }
-@media (min-width: 720px) { .grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 600px) { .grid { grid-template-columns: 1fr 1fr; } }
 @media (min-width: 1080px) { .grid { grid-template-columns: repeat(3, 1fr); } }
 .widget { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; border-top: 3px solid var(--src, var(--accent)); }
 .widget-head { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: .7rem .95rem .45rem; text-align: start; }
@@ -156,3 +156,44 @@ main { padding: 0 1rem; max-width: 1200px; margin: 0 auto; outline: 0; }
 .kws { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .65rem; }
 .kws .chip.sug { border-style: dashed; color: var(--muted); }
 ol.steps { margin: .3rem 0 0; padding-inline-start: 1.2rem; font-size: .86rem; color: var(--muted); }
+
+/* Videos */
+.vgrid { display: grid; gap: .85rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
+.vstrip { display: flex; gap: .75rem; overflow-x: auto; scroll-snap-type: x proximity; margin: 0 -1rem; padding: .2rem 1rem .9rem; scrollbar-width: none; }
+.vstrip::-webkit-scrollbar { display: none; }
+.vstrip .vcard { flex: none; width: min(70vw, 15rem); scroll-snap-align: start; }
+.vcard { display: flex; flex-direction: column; background: var(--card); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; text-align: start; }
+.vcard .item-title { -webkit-line-clamp: 2; padding: .55rem .8rem 0; }
+.vcard .meta { padding: 0 .8rem .65rem; }
+.vthumb { position: relative; display: block; aspect-ratio: 16 / 9; background: #1c2a22; }
+.vthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.play { position: absolute; inset: 0; margin: auto; width: 3rem; height: 3rem; border-radius: 50%; background: rgba(0, 0, 0, .62); }
+.play::after { content: ""; position: absolute; inset: 0; margin: auto; width: 0; height: 0; border-style: solid; border-width: .55rem 0 .55rem .9rem; border-color: transparent transparent transparent #fff; transform: translateX(.1rem); }
+.player { aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: #000; margin-bottom: .8rem; }
+.player iframe { width: 100%; height: 100%; border: 0; display: block; }
+.section-title .more { font-size: .8rem; font-weight: 600; color: var(--accent); }
+
+/* Foldables: narrow cover screen */
+@media (max-width: 359px) {
+  .top, .chips, .status, .searchbar { padding-inline: .75rem; }
+  main { padding: 0 .75rem; }
+  .hero, .vstrip { margin: 0 -.75rem; padding-inline: .75rem; }
+  .brand h1 { font-size: 1.02rem; }
+  .icon-btn { width: 2.35rem; height: 2.35rem; }
+  .tabs button { font-size: .64rem; }
+  .thumb { width: 4rem; height: 4rem; }
+}
+/* Foldables: unfolded inner screen and tablets — article/video opens as a centred dialog */
+@media (min-width: 600px) {
+  .sheet { inset: 50% auto auto 50%; width: min(40rem, 92vw); max-height: 90dvh; transform: translate(-50%, -50%); border-radius: 22px; padding-bottom: 1.1rem; animation: fade .18s ease-out; }
+  .sheet .grab { visibility: hidden; margin: .5rem auto; }
+  .tabs { justify-content: center; gap: .5rem; }
+  .tabs button { flex: 0 1 7.5rem; }
+  .hero-card { width: 21rem; }
+}
+@keyframes fade { from { opacity: 0; } }
+/* Screen spanned across a hinge: keep one widget column on each half, clear of the fold */
+@media (horizontal-viewport-segments: 2) {
+  main { max-width: none; }
+  .grid { grid-template-columns: 1fr 1fr; column-gap: calc(env(viewport-segment-left 1 0, 0px) - env(viewport-segment-right 0 0, 0px) + 2rem); }
+}
