@@ -197,3 +197,13 @@ ol.steps { margin: .3rem 0 0; padding-inline-start: 1.2rem; font-size: .86rem; c
   main { max-width: none; }
   .grid { grid-template-columns: 1fr 1fr; column-gap: calc(env(viewport-segment-left 1 0, 0px) - env(viewport-segment-right 0 0, 0px) + 2rem); }
 }
+
+/* Social tab */
+.seg.plat { margin: .2rem 0 .8rem; background: var(--card); box-shadow: var(--shadow); }
+.seg.plat button.on { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
+.embed { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; min-height: 12rem; }
+.embed iframe { max-width: 100%; }
+.hint { font-size: .78rem; color: var(--muted); text-align: center; margin: 0 0 1rem; }
+.src-row.link { text-decoration: none; color: inherit; justify-content: space-between; }
+.src-row.link > span:first-child { display: grid; }
+.src-row .more { color: var(--accent); font-weight: 600; font-size: .82rem; }
