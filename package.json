@@ -1,0 +1,12 @@
+{
+  "name": "saudi-news",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "أخبار السعودية — تطبيق ويب يجمع أخبار المملكة من مصادر متعددة في ودجات",
+  "scripts": {
+    "fetch": "node scripts/fetch-news.mjs",
+    "test": "node --test scripts/feed.test.mjs",
+    "serve": "node scripts/serve.mjs"
+  }
+}

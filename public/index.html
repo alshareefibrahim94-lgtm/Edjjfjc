@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>أخبار السعودية</title>
+<meta name="description" content="كل أخبار المملكة العربية السعودية من مصادر متعددة في مكان واحد">
+<meta name="theme-color" content="#0a7a45">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="أخبار السعودية">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <img src="icons/icon.svg" alt="" width="36" height="36">
+    <div>
+      <h1>أخبار السعودية</h1>
+      <p id="today"></p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button class="icon-btn" id="btn-search" aria-label="بحث"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+    <button class="icon-btn" id="btn-refresh" aria-label="تحديث"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+  </div>
+</header>
+
+<div class="searchbar" id="searchbar" hidden>
+  <input id="q" type="search" inputmode="search" placeholder="ابحث في الأخبار…" autocomplete="off" aria-label="ابحث في الأخبار">
+  <button id="q-close" aria-label="إغلاق البحث">إلغاء</button>
+</div>
+
+<nav class="chips" id="cats" aria-label="التصنيفات"></nav>
+<p class="status" id="status" role="status"></p>
+
+<main id="view" tabindex="-1"></main>
+
+<nav class="tabs" aria-label="التنقل">
+  <button data-tab="home" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="13" y="10" width="8" height="11" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/></svg><span>الودجات</span></button>
+  <button data-tab="latest"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>الأحدث</span></button>
+  <button data-tab="saved"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span>المحفوظات</span></button>
+  <button data-tab="settings"><svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h8M16 18h4"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="14" cy="18" r="2"/></svg><span>تخصيص</span></button>
+</nav>
+
+<div class="sheet-backdrop" id="backdrop" hidden></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden></section>
+
+<script src="app.js" type="module"></script>
+</body>
+</html>
