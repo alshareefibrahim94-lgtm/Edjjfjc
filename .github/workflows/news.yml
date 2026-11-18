@@ -1,52 +1,26 @@
-name: Update news and deploy
+name: Take website offline
 
+# One-off: replaces the published site with an empty placeholder page.
 on:
   push:
-  schedule:
-    - cron: '7,27,47 * * * *'
-  workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-concurrency:
-  group: news-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm test
-      - name: Fetch news feeds
-        env:
-          PREV_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data/news.json
-        run: npm run fetch
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: public
-
   deploy:
-    needs: build
     if: github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      # Until Pages is switched on in the repository settings there is nowhere
-      # to deploy to; skip with a warning instead of failing every scheduled run.
-      - id: pages
-        uses: actions/configure-pages@v5
-        continue-on-error: true
-      - if: steps.pages.outcome != 'success'
-        run: echo "::warning::GitHub Pages is not enabled. Set Settings → Pages → Source to GitHub Actions to publish the app."
-      - id: deploy
-        if: steps.pages.outcome == 'success'
-        uses: actions/deploy-pages@v4
+      - run: |
+          mkdir site
+          echo '<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex"><title>Offline</title>' > site/index.html
+          cp site/index.html site/404.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - uses: actions/deploy-pages@v4
